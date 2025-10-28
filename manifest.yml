@@ -6,13 +6,13 @@ categories:
   - apps/blogs
   - apps/content-management
   - apps/wordpress
-logo: https://raw.githubusercontent.com/jelastic-jps/wordpress/master/images/wp-standalone.png
+logo: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/images/wp-standalone.png
 homepage: http://wordpress.org/
 description:
   text: WordPress Standalone with built-in kit for choosing optimal application servers and a set of advanced features for running websites and blogs. WordPress CMS deployed as a lightweight standalone container with minimal allocated resources for cost efficiency.
   short: WordPress Standalone with built-in kit for choosing optimal application servers and a set of advanced features for running websites and blogs
 
-baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress/v2.2.0
+baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/tree/main
 
 onBeforeInit: /scripts/beforeInit.js?_r=${fn.random}
 onBeforeInstall: /scripts/beforeInstall.js?_r=${fn.random}
@@ -114,7 +114,7 @@ settings:
       markup:
 
 mixins:
- - https://raw.githubusercontent.com/jelastic-jps/wordpress/master/configs/vers.yaml
+ - https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/configs/vers.yaml
  - /scripts/common.yml
 
 globals:
