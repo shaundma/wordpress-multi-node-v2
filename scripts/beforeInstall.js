@@ -1,4 +1,7 @@
-var wpbfp = '${settings.wp_protect}' == 'true' ? "THROTTLE" : "OFF";
+// Multi-node WordPress topology following Trellis LEMP stack architecture
+// Node 1: Nginx + PHP-FPM (Application Server)
+// Node 2: MariaDB (Database Server)
+// Node 3: Redis (Cache Server)
 
 var resp = {
   result: 0,
@@ -6,39 +9,46 @@ var resp = {
   nodes: []
 }
 
-if ('${settings.ls-addon:false}'== 'true') {
-  resp.nodes.push({
-    nodeType: "llsmp",
-    engine: "${settings.php_engine:php8.3}",
-    count: 1,
-    cloudlets: "${settings.cloudlets:16}",
-    diskLimit: "${settings.diskspace:[quota.disk.limitation]}",
-    nodeGroup: "cp",
-    skipNodeEmails: "true",
-    displayName: "AppServer",
-    env: {
-      SERVER_WEBROOT: "/var/www/webroot/ROOT",
-      REDIS_ENABLED: "true",
-      WAF: "${settings.waf}",
-      WP_PROTECT: wpbfp,
-      WP_PROTECT_LIMIT: 100
-    }
-  })
-} else {
-  resp.nodes.push({
-    nodeType: "lemp",
-    engine: "${settings.php_engine:php8.3}",
-    count: 1,
-    cloudlets: "${settings.cloudlets:16}",
-    diskLimit: "${settings.diskspace:[quota.disk.limitation]}",
-    nodeGroup: "cp",
-    skipNodeEmails: "true",
-    displayName: "AppServer",
-    env: {
-      SERVER_WEBROOT: "/var/www/webroot/ROOT",
-      REDIS_ENABLED: "true"
-    }
-  })
-}
+// Node 1: Nginx + PHP-FPM Application Server
+resp.nodes.push({
+  nodeType: "nginxphp",
+  engine: "${settings.php_engine:php8.3}",
+  count: 1,
+  cloudlets: "${settings.app_cloudlets:16}",
+  diskLimit: "${settings.app_diskspace:10}",
+  nodeGroup: "cp",
+  skipNodeEmails: "true",
+  displayName: "Application",
+  env: {
+    SERVER_WEBROOT: "/var/www/webroot/ROOT"
+  }
+})
+
+// Node 2: MariaDB Database Server
+resp.nodes.push({
+  nodeType: "mariadb",
+  engine: "11.4.4",
+  count: 1,
+  cloudlets: "${settings.db_cloudlets:8}",
+  diskLimit: "${settings.db_diskspace:10}",
+  nodeGroup: "sqldb",
+  skipNodeEmails: "true",
+  displayName: "Database",
+  env: {
+    ON_ENV_INSTALL: ""
+  }
+})
+
+// Node 3: Redis Cache Server
+resp.nodes.push({
+  nodeType: "redis",
+  engine: "7.2.4",
+  count: 1,
+  cloudlets: "${settings.redis_cloudlets:4}",
+  diskLimit: "${settings.redis_diskspace:5}",
+  nodeGroup: "nosqldb",
+  skipNodeEmails: "true",
+  displayName: "Cache"
+})
 
 return resp;

@@ -1,7 +1,7 @@
 jpsType: install
 jpsVersion: '1.7.2'
-id: wordpress
-name: WordPress Standalone Kit
+id: wordpress-multinode
+name: WordPress Multi-Node LEMP Stack
 categories:
   - apps/blogs
   - apps/content-management
@@ -9,8 +9,8 @@ categories:
 logo: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/images/wp-standalone.png
 homepage: http://wordpress.org/
 description:
-  text: WordPress Standalone with built-in kit for choosing optimal application servers and a set of advanced features for running websites and blogs. WordPress CMS deployed as a lightweight standalone container with minimal allocated resources for cost efficiency.
-  short: WordPress Standalone with built-in kit for choosing optimal application servers and a set of advanced features for running websites and blogs
+  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability.
+  short: WordPress Multi-Node LEMP Stack with separate Nginx+PHP, MariaDB, and Redis nodes
 
 baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/tree/main
 
@@ -35,48 +35,11 @@ settings:
           caption: PHP 8.3
         - value: php8.2
           caption: PHP 8.2
-  
+
     - caption: Advanced Features
       type: displayfield
       name: displayfield
       markup:
- 
-    - caption: Install LiteSpeed High-Performance Web Server
-      type: checkbox
-      name: ls-addon
-      value: true
-      disabled: false
-      tooltip: "If this option is disabled, the cluster will be installed using NGINX load balancer and application servers"
-      showIf:
-        true:
-          - caption: WordPress Brute Force Attack Protection
-            type: checkbox
-            name: wp_protect
-            value: true
-            disabled: false
-            tooltip: "Secure WordPress Admin Panel with <a href='https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:config:wordpress-protection' target='_blank'>LiteSpeed Brute Force Protection</a> that limits failed login attempts. Default action is <b>Throttle</b> and number of allowed attempts is <b>100</b>"
-
-          - caption: Web Application Firewall
-            type: checkbox
-            name: waf
-            value: true
-            disabled: false
-            tooltip: "Protect web sites with <a href='https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:waf' target='_blank'>LiteSpeed built-in WAF</a> based on Free ModSecurity Rules from Comodo"
-
-        false:
-          - caption: WordPress Brute Force Attack Protection
-            type: checkbox
-            name: wp_protect
-            value: false
-            disabled: true
-            tooltip: "Secure WordPress Admin Panel with <a href='https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:config:wordpress-protection' target='_blank'>LiteSpeed Brute Force Protection</a> that limits failed login attempts. Default action is <b>Throttle</b> and number of allowed attempts is <b>100</b>"
-        
-          - caption: Web Application Firewall
-            type: checkbox
-            name: waf
-            value: false
-            disabled: true
-            tooltip: "Protect web sites with <a href='https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:waf' target='_blank'>LiteSpeed built-in WAF</a> based on Free ModSecurity Rules from Comodo"
              
     - caption: Install Let's Encrypt SSL with Auto-Renewal
       type: checkbox
@@ -122,7 +85,9 @@ globals:
   WP_CLUSTER_PATH: https://raw.githubusercontent.com/jelastic-jps/wordpress-cluster/v2.2.0
   DB_USER: ${settings.DB_USER:user-[fn.random]}
   DB_PASS: ${settings.DB_PASS:[fn.password(10)]}
-  DB_HOST: 127.0.0.1
+  DB_HOST: sqldb
+  REDIS_HOST: nosqldb
+  REDIS_PORT: 6379
   PROTOCOL: http
   WP_ADMIN_PASS: ${settings.WP_ADMIN_PASS:[fn.password(10)]}
   SUCCESS: default
@@ -130,37 +95,45 @@ globals:
 onInstall:
   - addLimits
   - addMetadata
-  - initLEsettings  
-  - setupNode:
-      nodeId: cp
+  - initLEsettings
+  - setupNodes
   - if (${globals.isSingleDeploy}):
     - setProtocol
-    - setDomain            
+    - setDomain
     - createUserDB
-    - installWordpress 
-    - if (${settings.mu-addon:false}): installMultisite    
-    - if (${settings.le-addon:false}): 
+    - configureRedis
+    - installWordpress
+    - if (${settings.mu-addon:false}): installMultisite
+    - if (${settings.le-addon:false}):
       - installLEaddon
       - setupLEdomain
     - if (${settings.cdn-addon:false}):
       - installCDN
       - setupCDN
     - if (${settings.woocommerce:false}): installWoocommerce
-    - install: 
+    - install:
       - jps: /scripts/events.jps?_r=${fn.random}
       - jps: ${globals.WP_CLUSTER_PATH}/scripts/addons.jps?_r=${fn.random}
     - if ('${settings.success_email}' != 'false'):
       - return:
           type: success
           message: /success/text/success-${globals.SUCCESS}.md?_r=${fn.random}
-          email: /success/email/success-${nodes.cp.master.nodeType}-${globals.SUCCESS}.md?_r=${fn.random}
+          email: /success/email/success-nginxphp-${globals.SUCCESS}.md?_r=${fn.random}
 
 actions:
 
   addLimits:
     - env.nodegroup.ApplyData[cp]:
         data:
-          validation : 
+          validation:
+            maxCount: 1
+    - env.nodegroup.ApplyData[sqldb]:
+        data:
+          validation:
+            maxCount: 1
+    - env.nodegroup.ApplyData[nosqldb]:
+        data:
+          validation:
             maxCount: 1
 
   addMetadata:
@@ -242,28 +215,46 @@ actions:
         db_host: ${globals.DB_HOST}
         db_user: ${globals.DB_USER}
         db_pass: ${globals.DB_PASS}
-        redis_host: /var/run/redis/redis.sock
-        redis_port: 0
+        redis_host: ${globals.REDIS_HOST}
+        redis_port: ${globals.REDIS_PORT}
         wp_admin_pass: ${globals.WP_ADMIN_PASS}
         wp_title: "Hello World"
         wp_url: ${globals.PROTOCOL}://${globals.DOMAIN}/
-        cluster: false
+        cluster: true
 
-  setupNode:
-    - log: OPTIMIZATION
+  setupNodes:
+    - log: "Setup Application Node"
     - install: https://raw.githubusercontent.com/jelastic/templates/master/config_v2.jps?_r=${fn.random}
       settings:
         targetGroup: cp
-        targetNodes: ${this.nodeId}
         optimization: wordpress
+    - log: "Setup Database Node"
+    - cmd[sqldb]: |-
+        wget ${baseUrl}/configs/sqldb/wordpress.cnf -O /etc/mysql/conf.d/wordpress.cnf &>> /var/log/run.log || true
+        systemctl restart mysql
+      user: root
+    - log: "Setup Redis Node"
+    - cmd[nosqldb]: |-
+        echo "maxmemory 256mb" >> /etc/redis.conf
+        echo "maxmemory-policy allkeys-lru" >> /etc/redis.conf
+        systemctl restart redis
+      user: root
         
   createUserDB:
-    - log: Create user for DataBase
-    - cmd [cp]: |-
-        wget ${baseUrl}/configs/sqldb/wordpress.cnf -O /etc/mysql/conf.d/wordpress.cnf &>> /var/log/run.log;
-        wget https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/scripts/setupUser.sh -O ~/setupUser.sh &>> /var/log/run.log;
-        bash ~/setupUser.sh ${globals.DB_USER} ${globals.DB_PASS} &>> /var/log/run.log;
-        jem passwd set -p ${globals.DB_PASS} &>> /var/log/run.log;
+    - log: Create user for Database
+    - cmd[sqldb]: |-
+        wget https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/scripts/setupUser.sh -O ~/setupUser.sh &>> /var/log/run.log
+        bash ~/setupUser.sh ${globals.DB_USER} ${globals.DB_PASS} &>> /var/log/run.log
+        mysql -uroot -e "GRANT ALL PRIVILEGES ON *.* TO '${globals.DB_USER}'@'%' IDENTIFIED BY '${globals.DB_PASS}';" &>> /var/log/run.log
+        mysql -uroot -e "FLUSH PRIVILEGES;" &>> /var/log/run.log
+        jem passwd set -p ${globals.DB_PASS} &>> /var/log/run.log
+      user: root
+
+  configureRedis:
+    - log: Configure Redis for WordPress
+    - cmd[nosqldb]: |-
+        redis-cli CONFIG SET maxmemory 256mb
+        redis-cli CONFIG SET maxmemory-policy allkeys-lru
       user: root
       
   installWoocommerce:
