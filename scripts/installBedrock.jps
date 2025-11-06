@@ -101,7 +101,8 @@ actions:
   configureEnv:
     - log: "Configuring Bedrock .env file and creating database"
     - cmd[cp]: |-
-        cd ${globals.WEBROOT}/current
+        # Create .env in shared directory
+        cd ${globals.WEBROOT}/shared
 
         # Generate salts
         echo "Generating WordPress security salts..."
@@ -188,11 +189,30 @@ actions:
           echo "Database user: $(grep DB_USER .env | cut -d= -f2 | tr -d \')"
           echo "Database host: $(grep DB_HOST .env | cut -d= -f2 | tr -d \')"
           echo "WordPress URL: $(grep WP_HOME .env | cut -d= -f2 | tr -d \')"
-          echo "Redis host: $(grep WP_REDIS_HOST .env | cut -d= -f2 | tr -d \')"
+          echo "Redis host: $(grep REDIS_HOST .env | cut -d= -f2 | tr -d \')"
         else
           echo "ERROR: Failed to create .env file"
           exit 1
         fi
+
+        # Create symlink from current/.env to shared/.env
+        cd ${globals.WEBROOT}/current
+        if [ -f .env ] && [ ! -L .env ]; then
+          rm .env
+        fi
+        ln -sfn ${globals.WEBROOT}/shared/.env .env
+        echo "Created symlink: current/.env -> shared/.env"
+
+        # Create symlink from current/wp-cli.yml to shared/wp-cli.yml
+        if [ -f wp-cli.yml ] && [ ! -L wp-cli.yml ]; then
+          rm wp-cli.yml
+        fi
+        ln -sfn ${globals.WEBROOT}/shared/wp-cli.yml wp-cli.yml
+        echo "Created symlink: current/wp-cli.yml -> shared/wp-cli.yml"
+
+        # Verify symlinks
+        echo "Configuration symlinks created:"
+        ls -la ${globals.WEBROOT}/current/ | grep -E '\.(env|yml)'
       user: root
 
   installWordPress:
@@ -382,10 +402,12 @@ actions:
         # Set file permissions
         find ${globals.WEBROOT} -type f -exec chmod 644 {} \;
 
-        # Secure .env file
-        chmod 600 .env
+        # Secure .env file (in shared directory)
+        chmod 600 ${globals.WEBROOT}/shared/.env
+        echo "Secured .env file with 600 permissions"
 
         # Make web/app/uploads writable
+        cd ${globals.WEBROOT}/current
         if [ -d web/app/uploads ]; then
           chmod -R 775 web/app/uploads
         else
