@@ -32,7 +32,7 @@ actions:
     - cmd[cp]: |-
         # Download Bedrock Nginx config
         wget -O /etc/nginx/conf.d/bedrock-site.conf \
-          ${baseUrl}/configs/nginx/bedrock-site.conf
+          https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/configs/nginx/bedrock-site.conf
 
         # Remove default WordPress config if present
         if [ -f /etc/nginx/conf.d/wordpress.conf ]; then
