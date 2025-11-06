@@ -189,8 +189,20 @@ actions:
 
   setupLEdomain:
     - cmd[cp]: |-
-        source /opt/letsencrypt/settings;
-        bash ~/bin/setupWP.sh --url https://${domain};
+        cd /var/www/webroot/ROOT
+
+        # Get the domain from Let's Encrypt settings
+        source /opt/letsencrypt/settings
+
+        # Update WordPress site URL to use HTTPS
+        wp option update home "https://${domain}" --allow-root
+        wp option update siteurl "https://${domain}/wp" --allow-root
+
+        # Also update .env file
+        sed -i "s|WP_HOME=http://|WP_HOME=https://|g" .env
+        sed -i "s|WP_SITEURL=http://|WP_SITEURL=https://|g" .env
+
+        echo "WordPress URLs updated to use HTTPS"
 
   installCDN:
     - install: https://raw.githubusercontent.com/jelastic-jps/cdn/master/manifest.yml?_r=${fn.random}
