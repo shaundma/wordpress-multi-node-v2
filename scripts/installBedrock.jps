@@ -9,7 +9,9 @@ globals:
 
 onInstall:
   - installComposer
+  - createDirectoryStructure
   - installBedrock
+  - createSymlinks
   - configureEnv
   - installWordPress
   - configurePlugins
@@ -26,44 +28,80 @@ actions:
         composer --version
       user: root
 
-  installBedrock:
-    - log: "Installing Bedrock via Composer"
+  createDirectoryStructure:
+    - log: "Creating deployment directory structure"
     - cmd[cp]: |-
-        # Backup existing WordPress if present
-        if [ -d ${globals.WEBROOT} ]; then
+        # Backup existing ROOT if present
+        if [ -d ${globals.WEBROOT} ] && [ ! -L ${globals.WEBROOT}/current ]; then
           echo "Backing up existing installation..."
           mv ${globals.WEBROOT} ${globals.WEBROOT}.backup.$(date +%s)
         fi
 
-        # Create Bedrock installation
+        # Create directory structure
+        mkdir -p ${globals.WEBROOT}/releases/1
+        mkdir -p ${globals.WEBROOT}/shared/uploads
+
+        echo "Directory structure created:"
+        tree -L 3 ${globals.WEBROOT} || ls -laR ${globals.WEBROOT}
+      user: root
+
+  installBedrock:
+    - log: "Installing Bedrock via Composer"
+    - cmd[cp]: |-
+        # Create Bedrock installation in releases/1
         echo "Creating Bedrock project via Composer..."
-        cd /var/www/webroot
+        cd ${globals.WEBROOT}/releases
 
         # Set Composer to allow plugins and disable interactive mode
         export COMPOSER_ALLOW_SUPERUSER=1
-        composer create-project roots/bedrock ROOT --no-interaction --prefer-dist 2>&1
+
+        # Install Bedrock into releases/1 (which already exists)
+        cd ${globals.WEBROOT}/releases/1
+        composer create-project roots/bedrock . --no-interaction --prefer-dist 2>&1
 
         # Verify installation
-        if [ ! -f ${globals.WEBROOT}/composer.json ]; then
+        if [ ! -f ${globals.WEBROOT}/releases/1/composer.json ]; then
           echo "ERROR: Bedrock installation failed"
           echo "Composer may have encountered an error"
           exit 1
         fi
 
-        if [ ! -d ${globals.WEBROOT}/web/wp ]; then
+        if [ ! -d ${globals.WEBROOT}/releases/1/web/wp ]; then
           echo "ERROR: WordPress core not found after Bedrock installation"
           exit 1
         fi
 
-        echo "Bedrock installed successfully"
+        echo "Bedrock installed successfully in releases/1"
         echo "Bedrock structure created:"
-        ls -la ${globals.WEBROOT}/ | head -15
+        ls -la ${globals.WEBROOT}/releases/1/ | head -15
+      user: root
+
+  createSymlinks:
+    - log: "Creating symbolic links"
+    - cmd[cp]: |-
+        # Create symlink from ROOT/current to releases/1
+        cd ${globals.WEBROOT}
+        ln -sfn ${globals.WEBROOT}/releases/1 current
+        echo "Created symlink: current -> releases/1"
+
+        # Replace web/app/uploads with symlink to shared/uploads
+        cd ${globals.WEBROOT}/current/web/app
+        if [ -d uploads ] && [ ! -L uploads ]; then
+          rmdir uploads 2>/dev/null || rm -rf uploads
+        fi
+        ln -sfn ${globals.WEBROOT}/shared/uploads uploads
+        echo "Created symlink: uploads -> shared/uploads"
+
+        # Verify symlinks
+        echo "Symlinks created:"
+        ls -la ${globals.WEBROOT}/ | grep current
+        ls -la ${globals.WEBROOT}/current/web/app/ | grep uploads
       user: root
 
   configureEnv:
     - log: "Configuring Bedrock .env file and creating database"
     - cmd[cp]: |-
-        cd ${globals.WEBROOT}
+        cd ${globals.WEBROOT}/current
 
         # Generate salts
         echo "Generating WordPress security salts..."
@@ -158,7 +196,7 @@ actions:
   installWordPress:
     - log: "Configuring WordPress site via WP-CLI"
     - cmd[cp]: |-
-        cd ${globals.WEBROOT}
+        cd ${globals.WEBROOT}/current
 
         # Install MySQL client if not present (required for WP-CLI database operations)
         if ! command -v mysql &> /dev/null; then
@@ -304,7 +342,7 @@ actions:
   configurePlugins:
     - log: "Installing and configuring essential plugins"
     - cmd[cp]: |-
-        cd ${globals.WEBROOT}
+        cd ${globals.WEBROOT}/current
 
         # Install Redis Object Cache plugin
         composer require wpackagist-plugin/redis-cache
@@ -321,9 +359,7 @@ actions:
   setPermissions:
     - log: "Setting correct file permissions"
     - cmd[cp]: |-
-        cd ${globals.WEBROOT}
-
-        # Set ownership
+        # Set ownership for entire ROOT directory (including releases and shared)
         chown -R nginx:nginx ${globals.WEBROOT}
 
         # Set directory permissions
