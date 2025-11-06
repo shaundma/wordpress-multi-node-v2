@@ -116,7 +116,7 @@ onInstall:
       - installBedrock
       - if (${settings.mu-addon:false}): installMultisite
       - if (${settings.woocommerce:false}): installWoocommerce
-    - if (!${settings.wp-addon:true}):
+    - if (${settings.wp-addon:false}):
       - setupSkeletonStructure
     - if (${settings.le-addon:false}):
       - installLEaddon
