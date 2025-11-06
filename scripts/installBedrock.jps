@@ -13,6 +13,7 @@ onInstall:
   - installBedrock
   - createSymlinks
   - configureEnv
+  - configureApplicationPHP
   - installWordPress
   - configurePlugins
   - setPermissions
@@ -140,12 +141,10 @@ actions:
         REDIS_HOST=${REDIS_HOST_PLACEHOLDER}
         REDIS_PORT=${REDIS_PORT_PLACEHOLDER}
         REDIS_PASSWORD=${REDIS_PASSWORD_PLACEHOLDER}
+        REDIS_SCHEME=tcp
         REDIS_DATABASE=0
         REDIS_TIMEOUT=1
         REDIS_READ_TIMEOUT=1
-
-        # Disable file editing in admin
-        DISALLOW_FILE_EDIT=true
         ENVEOF
 
         # Remove leading whitespace from .env (from heredoc indentation)
@@ -213,6 +212,60 @@ actions:
         # Verify symlinks
         echo "Configuration symlinks created:"
         ls -la ${globals.WEBROOT}/current/ | grep -E '\.(env|yml)'
+      user: root
+
+  configureApplicationPHP:
+    - log: "Adding Redis and WordPress configuration to application.php"
+    - cmd[cp]: |-
+        cd ${globals.WEBROOT}/current/config
+
+        # Check if application.php exists
+        if [ ! -f application.php ]; then
+          echo "ERROR: application.php not found"
+          exit 1
+        fi
+
+        # Create backup
+        cp application.php application.php.backup
+
+        # Find the line with "/** * Debugging Settings */" and insert Redis config above it
+        # Using awk to insert the Redis configuration block and WordPress settings
+        awk '
+        /\/\*\* \* Debugging Settings \*\// {
+          print "/**"
+          print " * Redis Settings"
+          print " */"
+          print "Config::define(\"WP_REDIS_SCHEME\", env(\"REDIS_SCHEME\"));"
+          print "Config::define(\"WP_REDIS_HOST\", env(\"REDIS_HOST\"));"
+          print "Config::define(\"WP_REDIS_PORT\", env(\"REDIS_PORT\"));"
+          print "Config::define(\"WP_REDIS_PASSWORD\", env(\"REDIS_PASSWORD\"));"
+          print "Config::define(\"WP_REDIS_DATABASE\", env(\"REDIS_DATABASE\"));"
+          print ""
+          print "/**"
+          print " * WordPress Updates and File Modifications"
+          print " */"
+          print "Config::define(\"AUTOMATIC_UPDATER_DISABLED\", false);"
+          print "Config::define(\"DISALLOW_FILE_EDIT\", false);"
+          print "Config::define(\"DISALLOW_FILE_MODS\", false);"
+          print ""
+        }
+        {print}
+        ' application.php.backup > application.php
+
+        # Verify the configuration was added
+        if grep -q "WP_REDIS_SCHEME" application.php && grep -q "AUTOMATIC_UPDATER_DISABLED" application.php; then
+          echo "Redis and WordPress configuration added to application.php successfully"
+        else
+          echo "ERROR: Failed to add configuration to application.php"
+          exit 1
+        fi
+
+        # Show the configuration sections
+        echo "Redis configuration in application.php:"
+        grep -A 8 "Redis Settings" application.php
+        echo ""
+        echo "WordPress Updates configuration in application.php:"
+        grep -A 5 "WordPress Updates and File Modifications" application.php
       user: root
 
   installWordPress:
@@ -379,15 +432,29 @@ actions:
         cd ${globals.WEBROOT}/current
 
         # Install Redis Object Cache plugin
+        echo "Installing Redis Object Cache plugin via Composer..."
         composer require wpackagist-plugin/redis-cache
 
         # Activate plugins via WP-CLI
+        echo "Activating Redis Object Cache plugin..."
         wp plugin activate redis-cache --allow-root
 
         # Enable Redis object cache
-        wp redis enable --allow-root || echo "Redis cache enable attempted"
+        echo "Enabling Redis object cache..."
+        REDIS_ENABLE_OUTPUT=$(wp redis enable --allow-root 2>&1)
+        REDIS_ENABLE_EXIT=$?
 
-        echo "Plugins configured"
+        echo "$REDIS_ENABLE_OUTPUT"
+
+        if [ $REDIS_ENABLE_EXIT -eq 0 ] && echo "$REDIS_ENABLE_OUTPUT" | grep -q "Success: Object cache enabled"; then
+          echo "Redis object cache enabled successfully"
+        else
+          echo "ERROR: Failed to enable Redis object cache"
+          echo "Output: $REDIS_ENABLE_OUTPUT"
+          exit 1
+        fi
+
+        echo "Plugins configured successfully"
       user: root
 
   setPermissions:

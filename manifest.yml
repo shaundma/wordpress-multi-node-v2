@@ -287,13 +287,18 @@ actions:
       settings:
         targetGroup: cp
         optimization: wordpress
-    - log: "Enable Redis and igbinary PHP extensions"
+    - log: "Enable Redis, igbinary, intl, gd, and imagick PHP extensions"
     - cmd[cp]: |-
         # Enable igbinary PHP extension (required by Redis)
         sed -i 's/^;extension=igbinary.so/extension=igbinary.so/' /etc/php.ini
 
         # Enable Redis PHP extension
         sed -i 's/^;extension=redis.so/extension=redis.so/' /etc/php.ini
+
+        # Enable intl, gd, and imagick extensions
+        sed -i 's/^;extension=intl.so/extension=intl.so/' /etc/php.ini
+        sed -i 's/^;extension=gd.so/extension=gd.so/' /etc/php.ini
+        sed -i 's/^;extension=imagick.so/extension=imagick.so/' /etc/php.ini
 
         # Verify extensions are enabled
         if grep -q "^extension=igbinary.so" /etc/php.ini; then
@@ -310,9 +315,30 @@ actions:
           exit 1
         fi
 
+        if grep -q "^extension=intl.so" /etc/php.ini; then
+          echo "intl PHP extension enabled"
+        else
+          echo "ERROR: Failed to enable intl PHP extension"
+          exit 1
+        fi
+
+        if grep -q "^extension=gd.so" /etc/php.ini; then
+          echo "gd PHP extension enabled"
+        else
+          echo "ERROR: Failed to enable gd PHP extension"
+          exit 1
+        fi
+
+        if grep -q "^extension=imagick.so" /etc/php.ini; then
+          echo "imagick PHP extension enabled"
+        else
+          echo "ERROR: Failed to enable imagick PHP extension"
+          exit 1
+        fi
+
         # Restart PHP-FPM to apply changes
         systemctl restart php-fpm
-        echo "PHP-FPM restarted with Redis and igbinary extensions"
+        echo "PHP-FPM restarted with Redis, igbinary, intl, gd, and imagick extensions"
       user: root
     - log: "Setup Database Node"
     - cmd[sqldb]: |-
