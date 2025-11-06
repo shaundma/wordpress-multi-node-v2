@@ -89,7 +89,9 @@ globals:
   REDIS_HOST: nosqldb
   REDIS_PORT: 6379
   PROTOCOL: http
+  WP_ADMIN_USER: ${settings.WP_ADMIN_USER:shaun}
   WP_ADMIN_PASS: ${settings.WP_ADMIN_PASS:[fn.password(10)]}
+  WP_ADMIN_EMAIL: ${settings.WP_ADMIN_EMAIL:shaun@dma.nl}
   SUCCESS: default
 
 onInstall:
@@ -256,7 +258,9 @@ actions:
         redis_host: ${globals.REDIS_HOST}
         redis_port: ${globals.REDIS_PORT}
         redis_pass: ${globals.REDIS_PASS}
+        wp_admin_user: ${globals.WP_ADMIN_USER}
         wp_admin_pass: ${globals.WP_ADMIN_PASS}
+        wp_admin_email: ${globals.WP_ADMIN_EMAIL}
         wp_title: "Hello World"
         wp_url: ${globals.PROTOCOL}://${globals.DOMAIN}
 

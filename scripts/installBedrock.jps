@@ -317,20 +317,16 @@ actions:
           # Install WordPress (creates database tables and admin user)
           echo "Setting up WordPress database and admin user..."
 
-          # Extract domain from wp_url for admin email
-          DOMAIN=$(echo "${settings.wp_url}" | sed -E 's|^https?://||' | sed 's|/.*||')
-          ADMIN_EMAIL="admin@$DOMAIN"
-
           wp core install \
             --url="${settings.wp_url}" \
             --title="WordPress Bedrock Site" \
-            --admin_user="admin" \
+            --admin_user="${settings.wp_admin_user}" \
             --admin_password="${settings.wp_admin_pass}" \
-            --admin_email="$ADMIN_EMAIL" \
+            --admin_email="${settings.wp_admin_email}" \
             --skip-email \
             --allow-root
 
-          echo "Admin user created with email: $ADMIN_EMAIL"
+          echo "Admin user created: ${settings.wp_admin_user} (${settings.wp_admin_email})"
 
           if [ $? -ne 0 ]; then
             echo "ERROR: WordPress core install failed"
