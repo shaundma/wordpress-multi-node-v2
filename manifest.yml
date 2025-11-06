@@ -89,14 +89,13 @@ globals:
   REDIS_HOST: nosqldb
   REDIS_PORT: 6379
   PROTOCOL: http
-  WP_ADMIN_USER: ${settings.WP_ADMIN_USER:shaun}
   WP_ADMIN_PASS: ${settings.WP_ADMIN_PASS:[fn.password(10)]}
-  WP_ADMIN_EMAIL: ${settings.WP_ADMIN_EMAIL:shaun@dma.nl}
   SUCCESS: default
 
 onInstall:
   - addLimits
   - addMetadata
+  - getUserInfo
   - initLEsettings
   - setupNodes
   - if (${globals.isSingleDeploy}):
@@ -146,6 +145,24 @@ actions:
       return api.env.control.ApplyEnvProperty ?
         api.env.control.ApplyEnvProperty('${env.name}', session, metadata) :
         api.env.control.ApplyNodeGroupData('${env.name}', session, 'cp', metadata);
+
+  getUserInfo:
+    script: |
+      var resp = jelastic.users.account.GetUserInfo();
+      if (resp.result != 0) return resp;
+
+      var email = resp.email || 'admin@example.com';
+      var username = email.split('@')[0];
+
+      return {
+        result: 0,
+        onAfterReturn: {
+          setGlobals: {
+            WP_ADMIN_USER: username,
+            WP_ADMIN_EMAIL: email
+          }
+        }
+      };
 
   setProtocol:
     - script: |
