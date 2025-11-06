@@ -69,6 +69,11 @@ actions:
         echo "Generating WordPress security salts..."
         SALTS=$(curl -s https://api.wordpress.org/secret-key/1.1/salt/)
 
+        # Convert salts from PHP define() format to .env format
+        # From: define('AUTH_KEY', 'value');
+        # To:   AUTH_KEY='value'
+        SALTS_ENV=$(echo "$SALTS" | sed -E "s/define\('([^']+)',\s*'([^']*)'\);/\1='\2'/g")
+
         # Create .env file in parts to handle multi-line salts properly
         cat > .env << 'ENVEOF'
         # Database Configuration
@@ -86,8 +91,8 @@ actions:
         # WordPress Salts
         ENVEOF
 
-        # Append the actual salts (multi-line content)
-        echo "$SALTS" >> .env
+        # Append the actual salts (multi-line content, converted to .env format)
+        echo "$SALTS_ENV" >> .env
 
         # Append Redis and other config
         cat >> .env << 'ENVEOF'
