@@ -39,10 +39,13 @@ actions:
 
         # Configure FastCGI cache zone
         cat > /etc/nginx/conf.d/fastcgi-cache.conf << 'CACHECONF'
-# FastCGI cache configuration
-fastcgi_cache_path /var/cache/nginx/fastcgi levels=1:2 keys_zone=wordpress:100m inactive=60m use_temp_path=off;
-fastcgi_cache_key "$scheme$request_method$host$request_uri";
-CACHECONF
+        # FastCGI cache configuration
+        fastcgi_cache_path /var/cache/nginx/fastcgi levels=1:2 keys_zone=wordpress:100m inactive=60m use_temp_path=off;
+        fastcgi_cache_key "$scheme$request_method$host$request_uri";
+        CACHECONF
+
+        # Remove leading whitespace from cache config
+        sed -i 's/^[[:space:]]*//;s/[[:space:]]*$//' /etc/nginx/conf.d/fastcgi-cache.conf
 
         # Create cache directory
         mkdir -p /var/cache/nginx/fastcgi
