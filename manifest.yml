@@ -118,6 +118,8 @@ onInstall:
       - if (${settings.woocommerce:false}): installWoocommerce
     - if (${settings.wp-addon:false}):
       - setupSkeletonStructure
+      - setGlobals:
+          SUCCESS: skeleton
     - if (${settings.le-addon:false}):
       - installLEaddon
       - if (${settings.wp-addon:true}): setupLEdomain
@@ -312,8 +314,8 @@ actions:
         cd app
         ln -sfn $WEBROOT/shared/uploads uploads
 
-        # Create simple default index.php
-        echo '<!DOCTYPE html><html><head><title>Environment Ready</title></head><body style="font-family:sans-serif;padding:40px;"><h1>Environment Ready</h1><p>Your LEMP stack is configured.</p><p>Credentials: /var/www/webroot/ROOT/shared/.env</p><ul><li>Nginx</li><li>PHP-FPM</li><li>MariaDB</li><li>Redis</li></ul></body></html>' > $WEBROOT/current/web/wp/index.php
+        # Create simple default index.php in web root (not web/wp)
+        echo '<!DOCTYPE html><html><head><title>Environment Ready</title></head><body style="font-family:sans-serif;padding:40px;"><h1>Environment Ready</h1><p>Your LEMP stack is configured.</p><p>Credentials: /var/www/webroot/ROOT/shared/.env</p><ul><li>Nginx</li><li>PHP-FPM</li><li>MariaDB</li><li>Redis</li></ul></body></html>' > $WEBROOT/current/web/index.php
 
         # Create .env file with credentials in shared directory
         cat > $WEBROOT/shared/.env << 'ENVEOF'
