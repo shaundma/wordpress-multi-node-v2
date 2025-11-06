@@ -307,35 +307,9 @@ actions:
         mkdir -p $WEBROOT/shared/uploads
         mkdir -p $WEBROOT/releases/1/config
 
-        # Create simple default index.php BEFORE creating symlinks
+        # Create simple default index.php BEFORE creating symlinks (using single line to avoid Hibernate errors)
         echo "Creating index.php..."
-        cat > $WEBROOT/releases/1/web/index.php << 'INDEXHTML'
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Environment Ready</title>
-        </head>
-        <body style="font-family:sans-serif;padding:40px;max-width:800px;margin:0 auto;">
-            <h1>🚀 Environment Ready</h1>
-            <p>Your LEMP stack is configured and ready for deployment.</p>
-            <h2>Services Available</h2>
-            <ul>
-                <li>✅ Nginx web server</li>
-                <li>✅ PHP-FPM</li>
-                <li>✅ MariaDB database</li>
-                <li>✅ Redis object cache</li>
-            </ul>
-            <h2>Directory Structure</h2>
-            <ul>
-                <li><strong>Document Root:</strong> /var/www/webroot/ROOT/current/web</li>
-                <li><strong>Shared Files:</strong> /var/www/webroot/ROOT/shared</li>
-                <li><strong>Credentials:</strong> /var/www/webroot/ROOT/shared/.env</li>
-            </ul>
-            <p>Deploy your WordPress application to get started!</p>
-        </body>
-        </html>
-        INDEXHTML
+        echo '<!DOCTYPE html><html><head><title>Environment Ready</title></head><body style="font-family:sans-serif;padding:40px;max-width:800px;margin:0 auto;"><h1>Environment Ready</h1><p>Your LEMP stack is configured and ready for deployment.</p><h2>Services</h2><ul><li>Nginx</li><li>PHP-FPM</li><li>MariaDB</li><li>Redis</li></ul><h2>Info</h2><p>Document Root: /var/www/webroot/ROOT/current/web</p><p>Credentials: /var/www/webroot/ROOT/shared/.env</p></body></html>' > $WEBROOT/releases/1/web/index.php
 
         # Verify index.php was created
         if [ ! -f $WEBROOT/releases/1/web/index.php ]; then
