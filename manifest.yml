@@ -182,7 +182,7 @@ actions:
     - cmd[cp]: |-
         [ ! -d /var/lib/jelastic/keys/letsencrypt ] && mkdir -p /var/lib/jelastic/keys/letsencrypt;
         echo "webroot=true" > /var/lib/jelastic/keys/letsencrypt/settings-custom;
-        echo "webrootPath=/var/www/webroot/ROOT/web" >> /var/lib/jelastic/keys/letsencrypt/settings-custom;
+        echo "webrootPath=/var/www/webroot/ROOT/current/web" >> /var/lib/jelastic/keys/letsencrypt/settings-custom;
         echo "test=false" >> /var/lib/jelastic/keys/letsencrypt/settings-custom;
         echo "withExtIp=${globals.isExtIP}" >> /var/lib/jelastic/keys/letsencrypt/settings-custom;
       user: root
@@ -256,7 +256,7 @@ actions:
         redis_port: ${globals.REDIS_PORT}
         wp_admin_pass: ${globals.WP_ADMIN_PASS}
         wp_title: "Hello World"
-        wp_url: ${globals.PROTOCOL}://${globals.DOMAIN}/
+        wp_url: ${globals.PROTOCOL}://${globals.DOMAIN}
 
   setupNodes:
     - log: "Setup Application Node"
