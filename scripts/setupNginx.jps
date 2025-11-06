@@ -30,8 +30,11 @@ actions:
   applyBedrockConfig:
     - log: "Applying Bedrock Nginx configuration"
     - cmd[cp]: |-
-        # Download Bedrock Nginx config
-        wget -O /etc/nginx/conf.d/bedrock-site.conf \
+        # Create sites-enabled directory if it doesn't exist
+        mkdir -p /etc/nginx/conf.d/sites-enabled
+
+        # Download Bedrock Nginx config to sites-enabled
+        wget -O /etc/nginx/conf.d/sites-enabled/bedrock-site.conf \
           https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/configs/nginx/bedrock-site.conf
 
         # Disable default Nginx config if present
@@ -47,7 +50,7 @@ actions:
         fi
 
         # Verify the config was downloaded
-        if [ -f /etc/nginx/conf.d/bedrock-site.conf ]; then
+        if [ -f /etc/nginx/conf.d/sites-enabled/bedrock-site.conf ]; then
           echo "Bedrock Nginx configuration applied"
         else
           echo "ERROR: Failed to download Nginx configuration"
@@ -96,4 +99,4 @@ success: |
   - Optimized caching for static assets
   - PHP-FPM integration
 
-  Configuration file: /etc/nginx/conf.d/bedrock-site.conf
+  Configuration file: /etc/nginx/conf.d/sites-enabled/bedrock-site.conf
