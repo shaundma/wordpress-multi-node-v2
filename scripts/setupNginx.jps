@@ -37,6 +37,18 @@ actions:
         wget -O /etc/nginx/conf.d/sites-enabled/wordpress.conf \
           https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/configs/nginx/wordpress.conf
 
+        # Configure FastCGI cache zone
+        cat > /etc/nginx/conf.d/fastcgi-cache.conf << 'CACHECONF'
+# FastCGI cache configuration
+fastcgi_cache_path /var/cache/nginx/fastcgi levels=1:2 keys_zone=wordpress:100m inactive=60m use_temp_path=off;
+fastcgi_cache_key "$scheme$request_method$host$request_uri";
+CACHECONF
+
+        # Create cache directory
+        mkdir -p /var/cache/nginx/fastcgi
+        chown nginx:nginx /var/cache/nginx/fastcgi
+        echo "FastCGI cache zone configured"
+
         # Restore good ssl.conf if Jelastic renamed it
         if [ -f /etc/nginx/conf.d/ssl.conf.disabled ]; then
           # Check if .disabled contains the real config (has sites-enabled include)
