@@ -241,25 +241,25 @@ actions:
         # Calculate insertion point (before the /** comment, which is 2 lines before)
         INSERT_LINE=$((LINE_NUM - 2))
 
-        # Create the configuration block to insert
-        cat > /tmp/redis_config.txt << 'CONFIGEOF'
-/**
- * Redis Settings
- */
-Config::define('WP_REDIS_SCHEME', env('REDIS_SCHEME'));
-Config::define('WP_REDIS_HOST', env('REDIS_HOST'));
-Config::define('WP_REDIS_PORT', env('REDIS_PORT'));
-Config::define('WP_REDIS_PASSWORD', env('REDIS_PASSWORD'));
-Config::define('WP_REDIS_DATABASE', env('REDIS_DATABASE'));
-
-/**
- * WordPress Updates and File Modifications
- */
-Config::define('AUTOMATIC_UPDATER_DISABLED', false);
-Config::define('DISALLOW_FILE_EDIT', false);
-Config::define('DISALLOW_FILE_MODS', false);
-
-CONFIGEOF
+        # Create the configuration block to insert using printf to avoid YAML issues
+        {
+          echo "/**"
+          echo " * Redis Settings"
+          echo " */"
+          echo "Config::define('WP_REDIS_SCHEME', env('REDIS_SCHEME'));"
+          echo "Config::define('WP_REDIS_HOST', env('REDIS_HOST'));"
+          echo "Config::define('WP_REDIS_PORT', env('REDIS_PORT'));"
+          echo "Config::define('WP_REDIS_PASSWORD', env('REDIS_PASSWORD'));"
+          echo "Config::define('WP_REDIS_DATABASE', env('REDIS_DATABASE'));"
+          echo ""
+          echo "/**"
+          echo " * WordPress Updates and File Modifications"
+          echo " */"
+          echo "Config::define('AUTOMATIC_UPDATER_DISABLED', false);"
+          echo "Config::define('DISALLOW_FILE_EDIT', false);"
+          echo "Config::define('DISALLOW_FILE_MODS', false);"
+          echo ""
+        } > /tmp/redis_config.txt
 
         # Insert the configuration using sed
         sed -i "${INSERT_LINE}r /tmp/redis_config.txt" application.php
