@@ -31,28 +31,42 @@ actions:
     - cmd[cp]: |-
         # Backup existing WordPress if present
         if [ -d ${globals.WEBROOT} ]; then
+          echo "Backing up existing installation..."
           mv ${globals.WEBROOT} ${globals.WEBROOT}.backup.$(date +%s)
         fi
 
         # Create Bedrock installation
+        echo "Creating Bedrock project via Composer..."
         cd /var/www/webroot
-        composer create-project roots/bedrock ROOT --no-interaction --prefer-dist
+
+        # Set Composer to allow plugins and disable interactive mode
+        export COMPOSER_ALLOW_SUPERUSER=1
+        composer create-project roots/bedrock ROOT --no-interaction --prefer-dist 2>&1
 
         # Verify installation
         if [ ! -f ${globals.WEBROOT}/composer.json ]; then
           echo "ERROR: Bedrock installation failed"
+          echo "Composer may have encountered an error"
+          exit 1
+        fi
+
+        if [ ! -d ${globals.WEBROOT}/web/wp ]; then
+          echo "ERROR: WordPress core not found after Bedrock installation"
           exit 1
         fi
 
         echo "Bedrock installed successfully"
+        echo "Bedrock structure created:"
+        ls -la ${globals.WEBROOT}/ | head -15
       user: root
 
   configureEnv:
-    - log: "Configuring Bedrock .env file"
+    - log: "Configuring Bedrock .env file and creating database"
     - cmd[cp]: |-
         cd ${globals.WEBROOT}
 
         # Generate salts
+        echo "Generating WordPress security salts..."
         SALTS=$(curl -s https://api.wordpress.org/secret-key/1.1/salt/)
 
         # Create .env file
@@ -100,10 +114,21 @@ actions:
           echo "ERROR: Failed to create .env file"
           exit 1
         fi
+
+        # Create WordPress database if it doesn't exist
+        echo "Creating WordPress database..."
+        mysql -h${settings.db_host} -u${settings.db_user} -p${settings.db_pass} -e "CREATE DATABASE IF NOT EXISTS wordpress CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>&1
+
+        if [ $? -eq 0 ]; then
+          echo "Database 'wordpress' ready"
+        else
+          echo "ERROR: Failed to create database"
+          exit 1
+        fi
       user: root
 
   installWordPress:
-    - log: "Installing WordPress core via WP-CLI"
+    - log: "Configuring WordPress site via WP-CLI"
     - cmd[cp]: |-
         cd ${globals.WEBROOT}
 
@@ -114,22 +139,53 @@ actions:
           mv wp-cli.phar /usr/local/bin/wp
         fi
 
-        # Install WordPress
-        wp core install \
-          --url="${settings.wp_url}" \
-          --title="WordPress Bedrock Site" \
-          --admin_user="admin" \
-          --admin_password="${settings.wp_admin_pass}" \
-          --admin_email="admin@example.com" \
-          --skip-email \
-          --allow-root
+        # Verify WordPress core files exist
+        if [ ! -d web/wp ]; then
+          echo "ERROR: WordPress core not found in web/wp/"
+          echo "Bedrock installation may have failed"
+          exit 1
+        fi
+
+        echo "WordPress core files found: $(wp core version --allow-root)"
+
+        # Test database connection
+        echo "Testing database connection..."
+        if ! wp db check --allow-root 2>/dev/null; then
+          echo "ERROR: Cannot connect to database"
+          echo "Database: wordpress"
+          echo "Host: ${settings.db_host}"
+          echo "User: ${settings.db_user}"
+          exit 1
+        fi
+        echo "Database connection: OK"
+
+        # Check if WordPress is already installed
+        if wp core is-installed --allow-root 2>/dev/null; then
+          echo "WordPress is already installed, skipping core install"
+        else
+          # Install WordPress (creates database tables and admin user)
+          echo "Setting up WordPress database and admin user..."
+          wp core install \
+            --url="${settings.wp_url}" \
+            --title="WordPress Bedrock Site" \
+            --admin_user="admin" \
+            --admin_password="${settings.wp_admin_pass}" \
+            --admin_email="admin@example.com" \
+            --skip-email \
+            --allow-root
+
+          if [ $? -ne 0 ]; then
+            echo "ERROR: WordPress core install failed"
+            exit 1
+          fi
+        fi
 
         # Verify installation
         if wp core is-installed --allow-root; then
           echo "WordPress installed successfully"
           wp core version --allow-root
         else
-          echo "ERROR: WordPress installation failed"
+          echo "ERROR: WordPress installation verification failed"
           exit 1
         fi
       user: root
