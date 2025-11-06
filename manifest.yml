@@ -12,7 +12,7 @@ description:
   text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability.
   short: WordPress Multi-Node LEMP Stack with separate Nginx+PHP, MariaDB, and Redis nodes
 
-baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/tree/main
+baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
 
 onBeforeInit: /scripts/beforeInit.js?_r=${fn.random}
 onBeforeInstall: /scripts/beforeInstall.js?_r=${fn.random}
