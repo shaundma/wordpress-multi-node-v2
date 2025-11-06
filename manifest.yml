@@ -117,9 +117,9 @@ onInstall:
       - if (${settings.mu-addon:false}): installMultisite
       - if (${settings.woocommerce:false}): installWoocommerce
     - if (${settings.wp-addon:false}):
-      - setupSkeletonStructure
       - setGlobals:
           SUCCESS: skeleton
+      - setupSkeletonStructure
     - if (${settings.le-addon:false}):
       - installLEaddon
       - if (${settings.wp-addon:true}): setupLEdomain
@@ -307,9 +307,9 @@ actions:
         mkdir -p $WEBROOT/shared/uploads
         mkdir -p $WEBROOT/releases/1/config
 
-        # Create simple default index.php BEFORE creating symlinks (using single line to avoid Hibernate errors)
+        # Create simple default index.php BEFORE creating symlinks
         echo "Creating index.php..."
-        echo '<!DOCTYPE html><html><head><title>Environment Ready</title></head><body style="font-family:sans-serif;padding:40px;max-width:800px;margin:0 auto;"><h1>Environment Ready</h1><p>Your LEMP stack is configured and ready for deployment.</p><h2>Services</h2><ul><li>Nginx</li><li>PHP-FPM</li><li>MariaDB</li><li>Redis</li></ul><h2>Info</h2><p>Document Root: /var/www/webroot/ROOT/current/web</p><p>Credentials: /var/www/webroot/ROOT/shared/.env</p></body></html>' > $WEBROOT/releases/1/web/index.php
+        echo '<html><body><h1>Environment Ready</h1><p>Credentials: /var/www/webroot/ROOT/shared/.env</p></body></html>' > $WEBROOT/releases/1/web/index.php
 
         # Verify index.php was created
         if [ ! -f $WEBROOT/releases/1/web/index.php ]; then
