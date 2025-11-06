@@ -190,14 +190,30 @@ actions:
           echo "WARNING: wp-cli.yml not found"
         fi
 
+        # Check Bedrock structure
+        echo "Checking Bedrock file structure..."
+        echo "web/wp-config.php: $([ -f web/wp-config.php ] && echo 'EXISTS' || echo 'MISSING')"
+        echo "config/application.php: $([ -f config/application.php ] && echo 'EXISTS' || echo 'MISSING')"
+
+        # Show wp-config.php if it exists
+        if [ -f web/wp-config.php ]; then
+          echo "Content of web/wp-config.php:"
+          cat web/wp-config.php
+        fi
+
         # Test WP-CLI database connection with error output
         echo "Testing WP-CLI database connection..."
-        WP_DB_CHECK=$(wp db check --allow-root 2>&1)
+        echo "Running: wp db check --allow-root --debug"
+        WP_DB_CHECK=$(wp db check --allow-root --debug 2>&1)
+        DB_CHECK_EXIT=$?
+        echo "Exit code: $DB_CHECK_EXIT"
+        echo "Full output:"
+        echo "$WP_DB_CHECK"
+
         if echo "$WP_DB_CHECK" | grep -q "Success"; then
           echo "WP-CLI database connection: OK"
         else
           echo "ERROR: WP-CLI cannot connect to database"
-          echo "WP-CLI output: $WP_DB_CHECK"
           echo ""
           echo "Checking .env file:"
           grep "^DB_" .env
