@@ -34,8 +34,8 @@ actions:
         mkdir -p /etc/nginx/conf.d/sites-enabled
 
         # Download Bedrock Nginx config to sites-enabled
-        wget -O /etc/nginx/conf.d/sites-enabled/bedrock-site.conf \
-          https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/configs/nginx/bedrock-site.conf
+        wget -O /etc/nginx/conf.d/sites-enabled/wordpress.conf \
+          https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/configs/nginx/wordpress.conf
 
         # Restore good ssl.conf if Jelastic renamed it
         if [ -f /etc/nginx/conf.d/ssl.conf.disabled ]; then
@@ -59,15 +59,9 @@ actions:
           echo "Disabled default Nginx configuration"
         fi
 
-        # Disable default WordPress config if present
-        if [ -f /etc/nginx/conf.d/wordpress.conf ]; then
-          mv /etc/nginx/conf.d/wordpress.conf /etc/nginx/conf.d/wordpress.conf.disabled
-          echo "Disabled WordPress default configuration"
-        fi
-
         # Verify the config was downloaded
-        if [ -f /etc/nginx/conf.d/sites-enabled/bedrock-site.conf ]; then
-          echo "Bedrock Nginx configuration applied"
+        if [ -f /etc/nginx/conf.d/sites-enabled/wordpress.conf ]; then
+          echo "WordPress Nginx configuration applied"
         else
           echo "ERROR: Failed to download Nginx configuration"
           exit 1
@@ -115,4 +109,4 @@ success: |
   - Optimized caching for static assets
   - PHP-FPM integration
 
-  Configuration file: /etc/nginx/conf.d/sites-enabled/bedrock-site.conf
+  Configuration file: /etc/nginx/conf.d/sites-enabled/wordpress.conf
