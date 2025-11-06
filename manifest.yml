@@ -40,7 +40,28 @@ settings:
       type: displayfield
       name: displayfield
       markup:
-             
+
+    - caption: Install WordPress
+      type: checkbox
+      name: wp-addon
+      value: true
+      disabled: false
+      tooltip: "Install WordPress with Bedrock boilerplate. Disable this if you plan to deploy WordPress using your own deployment tools. The environment will still be configured with Nginx, MariaDB, and Redis ready for your deployment."
+
+    - caption: Install WooCommerce
+      type: checkbox
+      name: woocommerce
+      value: false
+      disabled: false
+      tooltip: "WooCommerce is a free open-source e-commerce plugin designed specifically for WordPress. This is a great platform for a store of any size. (Only applies if WordPress is installed)"
+
+    - caption: Install WordPress Multisite Network
+      type: checkbox
+      name: mu-addon
+      value: false
+      disabled: false
+      tooltip: "Multisite is a type of WordPress installation that allows you to create and manage a network of multiple websites from a single WordPress dashboard. This lets you easily make changes and keep all of your websites updated from one place. (Only applies if WordPress is installed)"
+
     - caption: Install Let's Encrypt SSL with Auto-Renewal
       type: checkbox
       name: le-addon
@@ -55,20 +76,6 @@ settings:
       hidden: true
       disabled: false
       tooltip: "Jelastic CDN is an HTTP/3 premium content delivery network of 160+ Super PoPs (points of presence) with bandwidth capacity up to 115 Tbps, advanced caching and acceleration strategies based on best-in-class IP Anycast technology."
-
-    - caption: Install WordPress Multisite Network
-      type: checkbox
-      name: mu-addon
-      value: false
-      disabled: false
-      tooltip: "Multisite is a type of WordPress installation that allows you to create and manage a network of multiple websites from a single WordPress dashboard. This lets you easily make changes and keep all of your websites updated from one place."
-
-    - caption: Install WooCommerce
-      type: checkbox
-      name: woocommerce
-      value: false
-      disabled: false
-      tooltip: "WooCommerce is a free open-source e-commerce plugin designed specifically for WordPress. This is a great platform for a store of any size."
 
     - type: displayfield
       hideLabel: true
@@ -101,19 +108,22 @@ onInstall:
   - if (${globals.isSingleDeploy}):
     - setProtocol
     - setDomain
-    - createUserDB
     - getRedisPassword
     - configureRedis
     - setupBedrockNginx
-    - installBedrock
-    - if (${settings.mu-addon:false}): installMultisite
+    - if (${settings.wp-addon:true}):
+      - createUserDB
+      - installBedrock
+      - if (${settings.mu-addon:false}): installMultisite
+      - if (${settings.woocommerce:false}): installWoocommerce
+    - if (!${settings.wp-addon:true}):
+      - setupSkeletonStructure
     - if (${settings.le-addon:false}):
       - installLEaddon
       - setupLEdomain
     - if (${settings.cdn-addon:false}):
       - installCDN
       - setupCDN
-    - if (${settings.woocommerce:false}): installWoocommerce
     - install:
       - jps: /scripts/events.jps?_r=${fn.random}
       - jps: ${globals.WP_CLUSTER_PATH}/scripts/addons.jps?_r=${fn.random}
@@ -280,6 +290,165 @@ actions:
         wp_admin_email: ${globals.WP_ADMIN_EMAIL}
         wp_title: "Hello World"
         wp_url: ${globals.PROTOCOL}://${globals.DOMAIN}
+
+  setupSkeletonStructure:
+    - log: "Setting up skeleton directory structure for custom deployment"
+    - cmd[cp]: |-
+        WEBROOT="/var/www/webroot/ROOT"
+
+        # Create Bedrock-style directory structure
+        mkdir -p $WEBROOT/releases/1/web/wp
+        mkdir -p $WEBROOT/shared/uploads
+        mkdir -p $WEBROOT/releases/1/config
+
+        # Create symlink from current to releases/1
+        cd $WEBROOT
+        ln -sfn $WEBROOT/releases/1 current
+
+        # Create symlink from web/app/uploads to shared/uploads
+        cd $WEBROOT/current/web
+        mkdir -p app
+        cd app
+        ln -sfn $WEBROOT/shared/uploads uploads
+
+        # Create default index.php
+        cat > $WEBROOT/current/web/wp/index.php << 'PHPEOF'
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Welcome - Environment Ready</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    margin: 0;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: #fff;
+                }
+                .container {
+                    text-align: center;
+                    padding: 2rem;
+                    background: rgba(255, 255, 255, 0.1);
+                    backdrop-filter: blur(10px);
+                    border-radius: 20px;
+                    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+                    max-width: 600px;
+                }
+                h1 {
+                    font-size: 2.5rem;
+                    margin-bottom: 1rem;
+                }
+                p {
+                    font-size: 1.1rem;
+                    line-height: 1.6;
+                    margin-bottom: 1rem;
+                }
+                .info-box {
+                    background: rgba(255, 255, 255, 0.2);
+                    padding: 1.5rem;
+                    border-radius: 10px;
+                    margin-top: 2rem;
+                    text-align: left;
+                }
+                .info-box h2 {
+                    font-size: 1.3rem;
+                    margin-bottom: 1rem;
+                }
+                .info-item {
+                    margin-bottom: 0.5rem;
+                }
+                code {
+                    background: rgba(0, 0, 0, 0.3);
+                    padding: 0.2rem 0.5rem;
+                    border-radius: 4px;
+                    font-family: 'Courier New', monospace;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🚀 Environment Ready!</h1>
+                <p>Your LEMP stack (Nginx, MariaDB, Redis) is configured and ready for deployment.</p>
+                <p>Deploy your WordPress application to get started.</p>
+
+                <div class="info-box">
+                    <h2>📁 Directory Structure</h2>
+                    <div class="info-item">Document Root: <code>/var/www/webroot/ROOT/current/web</code></div>
+                    <div class="info-item">Shared Files: <code>/var/www/webroot/ROOT/shared</code></div>
+                    <div class="info-item">Credentials: <code>/var/www/webroot/ROOT/shared/.env</code></div>
+                </div>
+
+                <div class="info-box">
+                    <h2>🔧 Services Available</h2>
+                    <div class="info-item">✅ Nginx web server</div>
+                    <div class="info-item">✅ PHP-FPM <?php echo PHP_VERSION; ?></div>
+                    <div class="info-item">✅ MariaDB database</div>
+                    <div class="info-item">✅ Redis object cache</div>
+                </div>
+            </div>
+        </body>
+        </html>
+        PHPEOF
+
+        # Create .env file with credentials in shared directory
+        cat > $WEBROOT/shared/.env << 'ENVEOF'
+        # Database Configuration
+        DB_NAME=wordpress
+        DB_USER=DB_USER_PLACEHOLDER
+        DB_PASSWORD=DB_PASS_PLACEHOLDER
+        DB_HOST=DB_HOST_PLACEHOLDER
+        DB_PREFIX=wp_
+
+        # WordPress URLs (update these with your actual domain)
+        WP_ENV=production
+        WP_HOME=WP_HOME_PLACEHOLDER
+        WP_SITEURL=WP_SITEURL_PLACEHOLDER
+
+        # Redis Configuration
+        REDIS_HOST=REDIS_HOST_PLACEHOLDER
+        REDIS_PORT=REDIS_PORT_PLACEHOLDER
+        REDIS_PASSWORD=REDIS_PASS_PLACEHOLDER
+        REDIS_SCHEME=tcp
+        REDIS_DATABASE=0
+        REDIS_TIMEOUT=1
+        REDIS_READ_TIMEOUT=1
+
+        # Generate your own security keys at: https://roots.io/salts.html
+        # Then add them here when deploying your application
+        ENVEOF
+
+        # Remove leading whitespace from .env (from heredoc indentation)
+        sed -i 's/^[[:space:]]*//;s/[[:space:]]*$//' $WEBROOT/shared/.env
+
+        # Replace placeholders in .env with actual values
+        sed -i "s|DB_USER_PLACEHOLDER|${globals.DB_USER}|g" $WEBROOT/shared/.env
+        sed -i "s|DB_PASS_PLACEHOLDER|${globals.DB_PASS}|g" $WEBROOT/shared/.env
+        sed -i "s|DB_HOST_PLACEHOLDER|${globals.DB_HOST}|g" $WEBROOT/shared/.env
+        sed -i "s|WP_HOME_PLACEHOLDER|${globals.PROTOCOL}://${globals.DOMAIN}|g" $WEBROOT/shared/.env
+        sed -i "s|WP_SITEURL_PLACEHOLDER|${globals.PROTOCOL}://${globals.DOMAIN}/wp|g" $WEBROOT/shared/.env
+        sed -i "s|REDIS_HOST_PLACEHOLDER|${globals.REDIS_HOST}|g" $WEBROOT/shared/.env
+        sed -i "s|REDIS_PORT_PLACEHOLDER|${globals.REDIS_PORT}|g" $WEBROOT/shared/.env
+        sed -i "s|REDIS_PASS_PLACEHOLDER|${globals.REDIS_PASS}|g" $WEBROOT/shared/.env
+
+        # Create symlink from current/.env to shared/.env
+        cd $WEBROOT/current
+        ln -sfn $WEBROOT/shared/.env .env
+
+        # Set proper permissions
+        chown -R nginx:nginx $WEBROOT
+        find $WEBROOT -type d -exec chmod 755 {} \;
+        find $WEBROOT -type f -exec chmod 644 {} \;
+        chmod 600 $WEBROOT/shared/.env
+
+        echo "Skeleton directory structure created successfully"
+        echo "Credentials stored in: $WEBROOT/shared/.env"
+        ls -la $WEBROOT/
+      user: root
 
   setupNodes:
     - log: "Setup Application Node"
