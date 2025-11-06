@@ -299,23 +299,60 @@ actions:
     - cmd[cp]: |-
         WEBROOT="/var/www/webroot/ROOT"
 
+        echo "Creating directory structure..."
+
         # Create Bedrock-style directory structure
+        mkdir -p $WEBROOT/releases/1/web/app
         mkdir -p $WEBROOT/releases/1/web/wp
         mkdir -p $WEBROOT/shared/uploads
         mkdir -p $WEBROOT/releases/1/config
 
+        # Create simple default index.php BEFORE creating symlinks
+        echo "Creating index.php..."
+        cat > $WEBROOT/releases/1/web/index.php << 'INDEXHTML'
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Environment Ready</title>
+        </head>
+        <body style="font-family:sans-serif;padding:40px;max-width:800px;margin:0 auto;">
+            <h1>🚀 Environment Ready</h1>
+            <p>Your LEMP stack is configured and ready for deployment.</p>
+            <h2>Services Available</h2>
+            <ul>
+                <li>✅ Nginx web server</li>
+                <li>✅ PHP-FPM</li>
+                <li>✅ MariaDB database</li>
+                <li>✅ Redis object cache</li>
+            </ul>
+            <h2>Directory Structure</h2>
+            <ul>
+                <li><strong>Document Root:</strong> /var/www/webroot/ROOT/current/web</li>
+                <li><strong>Shared Files:</strong> /var/www/webroot/ROOT/shared</li>
+                <li><strong>Credentials:</strong> /var/www/webroot/ROOT/shared/.env</li>
+            </ul>
+            <p>Deploy your WordPress application to get started!</p>
+        </body>
+        </html>
+        INDEXHTML
+
+        # Verify index.php was created
+        if [ ! -f $WEBROOT/releases/1/web/index.php ]; then
+          echo "ERROR: Failed to create index.php"
+          exit 1
+        fi
+        echo "index.php created successfully"
+
         # Create symlink from current to releases/1
+        echo "Creating symlinks..."
         cd $WEBROOT
+        rm -f current
         ln -sfn $WEBROOT/releases/1 current
 
         # Create symlink from web/app/uploads to shared/uploads
-        cd $WEBROOT/current/web
-        mkdir -p app
-        cd app
+        cd $WEBROOT/releases/1/web/app
         ln -sfn $WEBROOT/shared/uploads uploads
-
-        # Create simple default index.php in web root (not web/wp)
-        echo '<!DOCTYPE html><html><head><title>Environment Ready</title></head><body style="font-family:sans-serif;padding:40px;"><h1>Environment Ready</h1><p>Your LEMP stack is configured.</p><p>Credentials: /var/www/webroot/ROOT/shared/.env</p><ul><li>Nginx</li><li>PHP-FPM</li><li>MariaDB</li><li>Redis</li></ul></body></html>' > $WEBROOT/current/web/index.php
 
         # Create .env file with credentials in shared directory
         cat > $WEBROOT/shared/.env << 'ENVEOF'
@@ -369,7 +406,23 @@ actions:
 
         echo "Skeleton directory structure created successfully"
         echo "Credentials stored in: $WEBROOT/shared/.env"
+
+        # Verify setup
+        echo ""
+        echo "Directory structure:"
         ls -la $WEBROOT/
+        echo ""
+        echo "Web directory contents:"
+        ls -la $WEBROOT/current/web/
+        echo ""
+
+        # Final verification
+        if [ -f $WEBROOT/current/web/index.php ]; then
+          echo "✓ index.php exists and is accessible"
+        else
+          echo "✗ ERROR: index.php not found at $WEBROOT/current/web/index.php"
+          exit 1
+        fi
       user: root
 
   setupNodes:
