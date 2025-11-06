@@ -53,17 +53,26 @@ actions:
               mv /etc/nginx/conf.d/ssl.conf.disabled /etc/nginx/conf.d/ssl.conf
               echo "Restored good ssl.conf with sites-enabled include"
             else
-              echo "SSL certificates not yet available - creating temporary ssl.conf with sites-enabled include"
+              echo "SSL certificates not yet available - using HTTP-only configuration"
               # Save the dummy ssl.conf
               if [ -f /etc/nginx/conf.d/ssl.conf ]; then
                 mv /etc/nginx/conf.d/ssl.conf /etc/nginx/conf.d/ssl.conf.dummy
                 echo "Saved dummy ssl.conf as ssl.conf.dummy"
               fi
-              # Copy the good config and comment out SSL certificate lines
-              cp /etc/nginx/conf.d/ssl.conf.disabled /etc/nginx/conf.d/ssl.conf
-              sed -i 's/^\s*ssl_certificate/#    ssl_certificate/g' /etc/nginx/conf.d/ssl.conf
-              echo "Created temporary ssl.conf with SSL cert lines commented out"
-              echo "This will be replaced when SSL certificates are installed"
+
+              # Check if nossl.conf exists (HTTP-only config)
+              if [ -f /etc/nginx/conf.d/nossl.conf ]; then
+                # Add sites-enabled include to nossl.conf if not present
+                if ! grep -q "sites-enabled" /etc/nginx/conf.d/nossl.conf; then
+                  # Add include before the last closing brace
+                  sed -i '/^}/i \    include /etc/nginx/conf.d/sites-enabled/*.conf;' /etc/nginx/conf.d/nossl.conf
+                  echo "Added sites-enabled include to nossl.conf"
+                fi
+                echo "Using nossl.conf for HTTP-only access until SSL is configured"
+              else
+                echo "WARNING: No nossl.conf found and SSL certs not available"
+                echo "Site may not be accessible until SSL certificates are installed"
+              fi
             fi
           fi
         fi
