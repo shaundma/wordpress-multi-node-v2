@@ -194,15 +194,34 @@ actions:
         # Get the domain from Let's Encrypt settings
         source /opt/letsencrypt/settings
 
-        # Update WordPress site URL to use HTTPS
-        wp option update home "https://${domain}" --allow-root
-        wp option update siteurl "https://${domain}/wp" --allow-root
+        # Check if multisite - skip search-replace for multisite
+        if ! wp core is-installed --network --allow-root; then
+          # Get current URLs
+          OLD_URL=$(wp option get home --allow-root)
+          OLD_DOMAIN=$(echo $OLD_URL | cut -d'/' -f3)
+          NEW_URL="https://${domain}"
+          NEW_DOMAIN="${domain}"
 
-        # Also update .env file
-        sed -i "s|WP_HOME=http://|WP_HOME=https://|g" .env
-        sed -i "s|WP_SITEURL=http://|WP_SITEURL=https://|g" .env
+          echo "Updating WordPress URLs from $OLD_URL to $NEW_URL"
 
-        echo "WordPress URLs updated to use HTTPS"
+          # Search and replace old URLs with new HTTPS URLs throughout database
+          wp search-replace "$OLD_URL" "$NEW_URL" --skip-columns=guid --all-tables --allow-root
+
+          # Also replace short domain (for protocol-relative URLs)
+          wp search-replace "$OLD_DOMAIN" "$NEW_DOMAIN" --skip-columns=guid --all-tables --allow-root
+
+          # Update .env file
+          sed -i "s|WP_HOME=http://|WP_HOME=https://|g" .env
+          sed -i "s|WP_SITEURL=http://|WP_SITEURL=https://|g" .env
+
+          # Flush caches
+          wp cache flush --allow-root || true
+          wp redis enable --allow-root || true
+
+          echo "WordPress URLs updated to HTTPS successfully"
+        else
+          echo "Multisite detected - skipping automatic URL update"
+        fi
 
   installCDN:
     - install: https://raw.githubusercontent.com/jelastic-jps/cdn/master/manifest.yml?_r=${fn.random}
