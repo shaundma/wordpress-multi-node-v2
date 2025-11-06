@@ -120,13 +120,14 @@ onInstall:
       - setupSkeletonStructure
     - if (${settings.le-addon:false}):
       - installLEaddon
-      - setupLEdomain
+      - if (${settings.wp-addon:true}): setupLEdomain
     - if (${settings.cdn-addon:false}):
       - installCDN
-      - setupCDN
-    - install:
-      - jps: /scripts/events.jps?_r=${fn.random}
-      - jps: ${globals.WP_CLUSTER_PATH}/scripts/addons.jps?_r=${fn.random}
+      - if (${settings.wp-addon:true}): setupCDN
+    - if (${settings.wp-addon:true}):
+      - install:
+        - jps: /scripts/events.jps?_r=${fn.random}
+        - jps: ${globals.WP_CLUSTER_PATH}/scripts/addons.jps?_r=${fn.random}
     - if ('${settings.success_email}' != 'false'):
       - return:
           type: success
