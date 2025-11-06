@@ -299,6 +299,17 @@ actions:
     - cmd[cp]: |-
         WEBROOT="/var/www/webroot/ROOT"
 
+        echo "========================================="
+        echo "SKELETON STRUCTURE SETUP STARTING"
+        echo "========================================="
+        echo "Current ROOT contents:"
+        ls -la $WEBROOT/ || echo "ROOT does not exist yet"
+
+        echo ""
+        echo "Removing old ROOT and creating fresh structure..."
+        rm -rf $WEBROOT
+        mkdir -p $WEBROOT
+
         echo "Creating directory structure..."
 
         # Create Bedrock-style directory structure
@@ -378,25 +389,24 @@ actions:
         find $WEBROOT -type f -exec chmod 644 {} \;
         chmod 600 $WEBROOT/shared/.env
 
-        echo "Skeleton directory structure created successfully"
-        echo "Credentials stored in: $WEBROOT/shared/.env"
-
-        # Verify setup
+        echo "========================================="
+        echo "SKELETON STRUCTURE SETUP COMPLETED"
+        echo "========================================="
         echo ""
         echo "Directory structure:"
-        ls -la $WEBROOT/
-        echo ""
-        echo "Web directory contents:"
-        ls -la $WEBROOT/current/web/
+        ls -laR $WEBROOT/
         echo ""
 
         # Final verification
         if [ -f $WEBROOT/current/web/index.php ]; then
-          echo "✓ index.php exists and is accessible"
+          echo "✓ SUCCESS: index.php exists at $WEBROOT/current/web/index.php"
+          echo "✓ SUCCESS: Credentials file at $WEBROOT/shared/.env"
         else
           echo "✗ ERROR: index.php not found at $WEBROOT/current/web/index.php"
           exit 1
         fi
+
+        echo "========================================="
       user: root
 
   setupNodes:
