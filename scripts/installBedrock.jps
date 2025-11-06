@@ -228,29 +228,44 @@ actions:
         # Create backup
         cp application.php application.php.backup
 
-        # Find the line with "/** * Debugging Settings */" and insert Redis config above it
-        # Using awk to insert the Redis configuration block and WordPress settings
-        awk '
-        /\/\*\* \* Debugging Settings \*\// {
-          print "/**"
-          print " * Redis Settings"
-          print " */"
-          print "Config::define(\"WP_REDIS_SCHEME\", env(\"REDIS_SCHEME\"));"
-          print "Config::define(\"WP_REDIS_HOST\", env(\"REDIS_HOST\"));"
-          print "Config::define(\"WP_REDIS_PORT\", env(\"REDIS_PORT\"));"
-          print "Config::define(\"WP_REDIS_PASSWORD\", env(\"REDIS_PASSWORD\"));"
-          print "Config::define(\"WP_REDIS_DATABASE\", env(\"REDIS_DATABASE\"));"
-          print ""
-          print "/**"
-          print " * WordPress Updates and File Modifications"
-          print " */"
-          print "Config::define(\"AUTOMATIC_UPDATER_DISABLED\", false);"
-          print "Config::define(\"DISALLOW_FILE_EDIT\", false);"
-          print "Config::define(\"DISALLOW_FILE_MODS\", false);"
-          print ""
-        }
-        {print}
-        ' application.php.backup > application.php
+        # Find the line number containing "Debugging Settings" and insert before it
+        LINE_NUM=$(grep -n "Debugging Settings" application.php | head -1 | cut -d: -f1)
+
+        if [ -z "$LINE_NUM" ]; then
+          echo "ERROR: Could not find 'Debugging Settings' section in application.php"
+          exit 1
+        fi
+
+        echo "Found 'Debugging Settings' at line $LINE_NUM"
+
+        # Calculate insertion point (before the /** comment, which is 2 lines before)
+        INSERT_LINE=$((LINE_NUM - 2))
+
+        # Create the configuration block to insert
+        cat > /tmp/redis_config.txt << 'CONFIGEOF'
+/**
+ * Redis Settings
+ */
+Config::define('WP_REDIS_SCHEME', env('REDIS_SCHEME'));
+Config::define('WP_REDIS_HOST', env('REDIS_HOST'));
+Config::define('WP_REDIS_PORT', env('REDIS_PORT'));
+Config::define('WP_REDIS_PASSWORD', env('REDIS_PASSWORD'));
+Config::define('WP_REDIS_DATABASE', env('REDIS_DATABASE'));
+
+/**
+ * WordPress Updates and File Modifications
+ */
+Config::define('AUTOMATIC_UPDATER_DISABLED', false);
+Config::define('DISALLOW_FILE_EDIT', false);
+Config::define('DISALLOW_FILE_MODS', false);
+
+CONFIGEOF
+
+        # Insert the configuration using sed
+        sed -i "${INSERT_LINE}r /tmp/redis_config.txt" application.php
+
+        # Clean up temp file
+        rm -f /tmp/redis_config.txt
 
         # Verify the configuration was added
         if grep -q "WP_REDIS_SCHEME" application.php && grep -q "AUTOMATIC_UPDATER_DISABLED" application.php; then
@@ -261,11 +276,12 @@ actions:
         fi
 
         # Show the configuration sections
+        echo ""
         echo "Redis configuration in application.php:"
-        grep -A 8 "Redis Settings" application.php
+        grep -A 5 "Redis Settings" application.php
         echo ""
         echo "WordPress Updates configuration in application.php:"
-        grep -A 5 "WordPress Updates and File Modifications" application.php
+        grep -A 4 "WordPress Updates and File Modifications" application.php
       user: root
 
   installWordPress:
