@@ -71,30 +71,30 @@ actions:
 
         # Create .env file with proper variable substitution (no quotes around values)
         cat > .env << ENVEOF
-# Database Configuration
-DB_NAME=wordpress
-DB_USER=${settings.db_user}
-DB_PASSWORD=${settings.db_pass}
-DB_HOST=${settings.db_host}
-DB_PREFIX=wp_
+        # Database Configuration
+        DB_NAME=wordpress
+        DB_USER=${settings.db_user}
+        DB_PASSWORD=${settings.db_pass}
+        DB_HOST=${settings.db_host}
+        DB_PREFIX=wp_
 
-# WordPress URLs
-WP_ENV=production
-WP_HOME=${settings.wp_url}
-WP_SITEURL=${settings.wp_url}/wp
+        # WordPress URLs
+        WP_ENV=production
+        WP_HOME=${settings.wp_url}
+        WP_SITEURL=${settings.wp_url}/wp
 
-# WordPress Salts
-\$SALTS
+        # WordPress Salts
+        \$SALTS
 
-# Redis Configuration
-WP_REDIS_HOST=${settings.redis_host}
-WP_REDIS_PORT=${settings.redis_port}
-WP_REDIS_DATABASE=0
-WP_REDIS_TIMEOUT=1
-WP_REDIS_READ_TIMEOUT=1
+        # Redis Configuration
+        WP_REDIS_HOST=${settings.redis_host}
+        WP_REDIS_PORT=${settings.redis_port}
+        WP_REDIS_DATABASE=0
+        WP_REDIS_TIMEOUT=1
+        WP_REDIS_READ_TIMEOUT=1
 
-# Disable file editing in admin
-DISALLOW_FILE_EDIT=true
+        # Disable file editing in admin
+        DISALLOW_FILE_EDIT=true
         ENVEOF
 
         # Replace the salts placeholder with actual salts
@@ -105,10 +105,13 @@ DISALLOW_FILE_EDIT=true
 
         # Create wp-cli.yml for Bedrock
         cat > wp-cli.yml << 'WPCLIEOF'
-path: web/wp
-require:
-  - vendor/autoload.php
+        path: web/wp
+        require:
+          - vendor/autoload.php
         WPCLIEOF
+
+        # Remove base indentation (8 spaces) from wp-cli.yml while preserving structure
+        sed -i 's/^        //;s/[[:space:]]*$//' wp-cli.yml
 
         echo "Created wp-cli.yml configuration for Bedrock"
 
