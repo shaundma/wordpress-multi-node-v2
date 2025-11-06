@@ -101,6 +101,7 @@ onInstall:
     - setProtocol
     - setDomain
     - createUserDB
+    - getRedisPassword
     - configureRedis
     - setupBedrockNginx
     - installBedrock
@@ -254,6 +255,7 @@ actions:
         db_pass: ${globals.DB_PASS}
         redis_host: ${globals.REDIS_HOST}
         redis_port: ${globals.REDIS_PORT}
+        redis_pass: ${globals.REDIS_PASS}
         wp_admin_pass: ${globals.WP_ADMIN_PASS}
         wp_title: "Hello World"
         wp_url: ${globals.PROTOCOL}://${globals.DOMAIN}
@@ -338,11 +340,35 @@ actions:
         echo "Database setup completed successfully"
       user: root
 
+  getRedisPassword:
+    - log: Get Redis password
+    - cmd[nosqldb]: |-
+        # Extract Redis password from redis.conf
+        REDIS_PASS=$(grep "^requirepass" /etc/redis.conf | awk '{print $2}' | tr -d '\n')
+
+        if [ -z "$REDIS_PASS" ]; then
+          echo "ERROR: Could not find Redis password in /etc/redis.conf"
+          exit 1
+        fi
+
+        echo "$REDIS_PASS"
+      user: root
+    - script: |
+        var output = "${response.out}".trim();
+        return {
+          result: 0,
+          onAfterReturn: {
+            setGlobals: {
+              REDIS_PASS: output
+            }
+          }
+        }
+
   configureRedis:
     - log: Configure Redis for WordPress
     - cmd[nosqldb]: |-
-        redis-cli CONFIG SET maxmemory 256mb
-        redis-cli CONFIG SET maxmemory-policy allkeys-lru
+        redis-cli -a ${globals.REDIS_PASS} CONFIG SET maxmemory 256mb
+        redis-cli -a ${globals.REDIS_PASS} CONFIG SET maxmemory-policy allkeys-lru
       user: root
       
   installWoocommerce:

@@ -138,6 +138,7 @@ actions:
         # Redis Configuration
         WP_REDIS_HOST=${WP_REDIS_HOST_PLACEHOLDER}
         WP_REDIS_PORT=${WP_REDIS_PORT_PLACEHOLDER}
+        WP_REDIS_PASSWORD=${WP_REDIS_PASSWORD_PLACEHOLDER}
         WP_REDIS_DATABASE=0
         WP_REDIS_TIMEOUT=1
         WP_REDIS_READ_TIMEOUT=1
@@ -157,6 +158,7 @@ actions:
         sed -i "s|\${WP_SITEURL_PLACEHOLDER}|${settings.wp_url}/wp|g" .env
         sed -i "s|\${WP_REDIS_HOST_PLACEHOLDER}|${settings.redis_host}|g" .env
         sed -i "s|\${WP_REDIS_PORT_PLACEHOLDER}|${settings.redis_port}|g" .env
+        sed -i "s|\${WP_REDIS_PASSWORD_PLACEHOLDER}|${settings.redis_pass}|g" .env
 
         # Create wp-cli.yml for Bedrock
         cat > wp-cli.yml << 'WPCLIEOF'
