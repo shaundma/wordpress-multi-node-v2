@@ -95,7 +95,7 @@ actions:
 
         # Disable file editing in admin
         DISALLOW_FILE_EDIT=true
-        ENVEOF
+ENVEOF
 
         # Replace the salts placeholder with actual salts
         sed -i "s|\$SALTS|$SALTS|g" .env
