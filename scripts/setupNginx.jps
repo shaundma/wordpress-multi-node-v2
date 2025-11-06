@@ -37,6 +37,22 @@ actions:
         wget -O /etc/nginx/conf.d/sites-enabled/bedrock-site.conf \
           https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/configs/nginx/bedrock-site.conf
 
+        # Restore good ssl.conf if Jelastic renamed it
+        if [ -f /etc/nginx/conf.d/ssl.conf.disabled ]; then
+          # Check if .disabled contains the real config (has sites-enabled include)
+          if grep -q "sites-enabled" /etc/nginx/conf.d/ssl.conf.disabled; then
+            echo "Found good ssl.conf renamed to ssl.conf.disabled - restoring..."
+            # Save the dummy ssl.conf
+            if [ -f /etc/nginx/conf.d/ssl.conf ]; then
+              mv /etc/nginx/conf.d/ssl.conf /etc/nginx/conf.d/ssl.conf.dummy
+              echo "Saved dummy ssl.conf as ssl.conf.dummy"
+            fi
+            # Restore the good config
+            mv /etc/nginx/conf.d/ssl.conf.disabled /etc/nginx/conf.d/ssl.conf
+            echo "Restored good ssl.conf with sites-enabled include"
+          fi
+        fi
+
         # Disable default Nginx config if present
         if [ -f /etc/nginx/conf.d/sites-enabled/default.conf ]; then
           mv /etc/nginx/conf.d/sites-enabled/default.conf /etc/nginx/conf.d/sites-enabled/default.conf.disabled
