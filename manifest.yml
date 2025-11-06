@@ -102,7 +102,8 @@ onInstall:
     - setDomain
     - createUserDB
     - configureRedis
-    - installWordpress
+    - setupBedrockNginx
+    - installBedrock
     - if (${settings.mu-addon:false}): installMultisite
     - if (${settings.le-addon:false}):
       - installLEaddon
@@ -181,7 +182,7 @@ actions:
     - cmd[cp]: |-
         [ ! -d /var/lib/jelastic/keys/letsencrypt ] && mkdir -p /var/lib/jelastic/keys/letsencrypt;
         echo "webroot=true" > /var/lib/jelastic/keys/letsencrypt/settings-custom;
-        echo "webrootPath=/var/www/webroot/ROOT" >> /var/lib/jelastic/keys/letsencrypt/settings-custom;
+        echo "webrootPath=/var/www/webroot/ROOT/web" >> /var/lib/jelastic/keys/letsencrypt/settings-custom;
         echo "test=false" >> /var/lib/jelastic/keys/letsencrypt/settings-custom;
         echo "withExtIp=${globals.isExtIP}" >> /var/lib/jelastic/keys/letsencrypt/settings-custom;
       user: root
@@ -209,8 +210,13 @@ actions:
   installMultisite:
     - install: ${globals.WP_CLUSTER_PATH}/addons/multisite.jps
 
-  installWordpress:
-    - install: ${globals.WP_CLUSTER_PATH}/scripts/installWP.jps
+  setupBedrockNginx:
+    - log: "Setting up Trellis Nginx configuration for Bedrock"
+    - install: /scripts/setupNginx.jps?_r=${fn.random}
+
+  installBedrock:
+    - log: "Installing Bedrock WordPress"
+    - install: /scripts/installBedrock.jps?_r=${fn.random}
       settings:
         db_host: ${globals.DB_HOST}
         db_user: ${globals.DB_USER}
@@ -220,7 +226,6 @@ actions:
         wp_admin_pass: ${globals.WP_ADMIN_PASS}
         wp_title: "Hello World"
         wp_url: ${globals.PROTOCOL}://${globals.DOMAIN}/
-        cluster: true
 
   setupNodes:
     - log: "Setup Application Node"
@@ -258,7 +263,11 @@ actions:
       user: root
       
   installWoocommerce:
-    cmd[${nodes.cp.master.id}]: |-
-      wp plugin install woocommerce --version=${globals.version_woocommerce} --activate --path=/var/www/webroot/ROOT &>> /var/log/run.log;
+    - log: "Installing WooCommerce for Bedrock"
+    - cmd[${nodes.cp.master.id}]: |-
+        cd /var/www/webroot/ROOT
+        composer require wpackagist-plugin/woocommerce:${globals.version_woocommerce} &>> /var/log/run.log
+        wp plugin activate woocommerce --allow-root &>> /var/log/run.log
+      user: root
 
 startPage: ${env.url}

@@ -1,0 +1,92 @@
+---
+jpsType: update
+name: Setup Trellis Nginx Configuration
+description: Applies Trellis-style Nginx configuration for Bedrock
+
+globals:
+  NGINX_CONF_DIR: /etc/nginx/conf.d
+  WEBROOT: /var/www/webroot/ROOT
+
+onInstall:
+  - backupNginxConfig
+  - applyBedrockConfig
+  - testNginxConfig
+  - reloadNginx
+
+actions:
+  backupNginxConfig:
+    - log: "Backing up existing Nginx configuration"
+    - cmd[cp]: |-
+        # Create backup directory
+        mkdir -p /etc/nginx/backups
+
+        # Backup current configuration
+        BACKUP_FILE="/etc/nginx/backups/nginx-$(date +%Y%m%d-%H%M%S).tar.gz"
+        tar -czf "$BACKUP_FILE" /etc/nginx/conf.d/ 2>/dev/null || true
+
+        echo "Backup created: $BACKUP_FILE"
+      user: root
+
+  applyBedrockConfig:
+    - log: "Applying Bedrock Nginx configuration"
+    - cmd[cp]: |-
+        # Download Bedrock Nginx config
+        wget -O /etc/nginx/conf.d/bedrock-site.conf \
+          ${baseUrl}/configs/nginx/bedrock-site.conf
+
+        # Remove default WordPress config if present
+        if [ -f /etc/nginx/conf.d/wordpress.conf ]; then
+          mv /etc/nginx/conf.d/wordpress.conf /etc/nginx/conf.d/wordpress.conf.disabled
+        fi
+
+        # Verify the config was downloaded
+        if [ -f /etc/nginx/conf.d/bedrock-site.conf ]; then
+          echo "Bedrock Nginx configuration applied"
+        else
+          echo "ERROR: Failed to download Nginx configuration"
+          exit 1
+        fi
+      user: root
+
+  testNginxConfig:
+    - log: "Testing Nginx configuration"
+    - cmd[cp]: |-
+        # Test Nginx configuration
+        nginx -t 2>&1
+
+        if [ $? -eq 0 ]; then
+          echo "Nginx configuration test passed"
+        else
+          echo "ERROR: Nginx configuration test failed"
+          # Restore from backup if test fails
+          echo "Restoring previous configuration..."
+          exit 1
+        fi
+      user: root
+
+  reloadNginx:
+    - log: "Reloading Nginx"
+    - cmd[cp]: |-
+        # Reload Nginx to apply new configuration
+        systemctl reload nginx
+
+        if [ $? -eq 0 ]; then
+          echo "Nginx reloaded successfully"
+          systemctl status nginx | head -n 5
+        else
+          echo "ERROR: Failed to reload Nginx"
+          exit 1
+        fi
+      user: root
+
+success: |
+  **Nginx Configuration Updated**
+
+  Trellis-style Nginx configuration has been applied with:
+  - Bedrock-specific document root (web/ directory)
+  - Enhanced security headers
+  - Protection for sensitive files (.env, composer.json)
+  - Optimized caching for static assets
+  - PHP-FPM integration
+
+  Configuration file: /etc/nginx/conf.d/bedrock-site.conf

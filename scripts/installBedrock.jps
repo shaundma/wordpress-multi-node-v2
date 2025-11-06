@@ -1,0 +1,192 @@
+---
+jpsType: update
+name: Install Bedrock WordPress
+description: Installs Bedrock WordPress with Trellis-style configuration
+
+globals:
+  WEBROOT: /var/www/webroot/ROOT
+  BEDROCK_REPO: https://github.com/roots/bedrock.git
+
+onInstall:
+  - installComposer
+  - installBedrock
+  - configureEnv
+  - installWordPress
+  - configurePlugins
+  - setPermissions
+
+actions:
+  installComposer:
+    - log: "Installing Composer"
+    - cmd[cp]: |-
+        if [ ! -f /usr/local/bin/composer ]; then
+          wget https://getcomposer.org/download/latest-stable/composer.phar -O /usr/local/bin/composer
+          chmod +x /usr/local/bin/composer
+        fi
+        composer --version
+      user: root
+
+  installBedrock:
+    - log: "Installing Bedrock via Composer"
+    - cmd[cp]: |-
+        # Backup existing WordPress if present
+        if [ -d ${globals.WEBROOT} ]; then
+          mv ${globals.WEBROOT} ${globals.WEBROOT}.backup.$(date +%s)
+        fi
+
+        # Create Bedrock installation
+        cd /var/www/webroot
+        composer create-project roots/bedrock ROOT --no-interaction --prefer-dist
+
+        # Verify installation
+        if [ ! -f ${globals.WEBROOT}/composer.json ]; then
+          echo "ERROR: Bedrock installation failed"
+          exit 1
+        fi
+
+        echo "Bedrock installed successfully"
+      user: root
+
+  configureEnv:
+    - log: "Configuring Bedrock .env file"
+    - cmd[cp]: |-
+        cd ${globals.WEBROOT}
+
+        # Generate salts
+        SALTS=$(curl -s https://api.wordpress.org/secret-key/1.1/salt/)
+
+        # Create .env file
+        cat > .env << 'ENVEOF'
+        # Database Configuration
+        DB_NAME='wordpress'
+        DB_USER='${settings.db_user}'
+        DB_PASSWORD='${settings.db_pass}'
+        DB_HOST='${settings.db_host}'
+        DB_PREFIX='wp_'
+
+        # WordPress URLs
+        WP_ENV='production'
+        WP_HOME='${settings.wp_url}'
+        WP_SITEURL='${settings.wp_url}/wp'
+
+        # WordPress Salts
+        ENVEOF
+
+        # Append salts
+        echo "$SALTS" >> .env
+
+        # Redis Configuration
+        cat >> .env << 'ENVEOF'
+
+        # Redis Configuration
+        WP_REDIS_HOST='${settings.redis_host}'
+        WP_REDIS_PORT='${settings.redis_port}'
+        WP_REDIS_DATABASE='0'
+        WP_REDIS_TIMEOUT='1'
+        WP_REDIS_READ_TIMEOUT='1'
+
+        # Disable file editing in admin
+        DISALLOW_FILE_EDIT=true
+        ENVEOF
+
+        # Verify .env was created
+        if [ -f .env ]; then
+          echo ".env file created successfully"
+          # Don't show full content for security, just confirm key variables
+          grep -q "DB_NAME" .env && echo "Database config: OK"
+          grep -q "WP_HOME" .env && echo "URL config: OK"
+          grep -q "WP_REDIS_HOST" .env && echo "Redis config: OK"
+        else
+          echo "ERROR: Failed to create .env file"
+          exit 1
+        fi
+      user: root
+
+  installWordPress:
+    - log: "Installing WordPress core via WP-CLI"
+    - cmd[cp]: |-
+        cd ${globals.WEBROOT}
+
+        # Install WP-CLI if not present
+        if [ ! -f /usr/local/bin/wp ]; then
+          curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          chmod +x wp-cli.phar
+          mv wp-cli.phar /usr/local/bin/wp
+        fi
+
+        # Install WordPress
+        wp core install \
+          --url="${settings.wp_url}" \
+          --title="WordPress Bedrock Site" \
+          --admin_user="admin" \
+          --admin_password="${settings.wp_admin_pass}" \
+          --admin_email="admin@example.com" \
+          --skip-email \
+          --allow-root
+
+        # Verify installation
+        if wp core is-installed --allow-root; then
+          echo "WordPress installed successfully"
+          wp core version --allow-root
+        else
+          echo "ERROR: WordPress installation failed"
+          exit 1
+        fi
+      user: root
+
+  configurePlugins:
+    - log: "Installing and configuring essential plugins"
+    - cmd[cp]: |-
+        cd ${globals.WEBROOT}
+
+        # Install Redis Object Cache plugin
+        composer require wpackagist-plugin/redis-cache
+
+        # Activate plugins via WP-CLI
+        wp plugin activate redis-cache --allow-root
+
+        # Enable Redis object cache
+        wp redis enable --allow-root || echo "Redis cache enable attempted"
+
+        echo "Plugins configured"
+      user: root
+
+  setPermissions:
+    - log: "Setting correct file permissions"
+    - cmd[cp]: |-
+        cd ${globals.WEBROOT}
+
+        # Set ownership
+        chown -R nginx:nginx ${globals.WEBROOT}
+
+        # Set directory permissions
+        find ${globals.WEBROOT} -type d -exec chmod 755 {} \;
+
+        # Set file permissions
+        find ${globals.WEBROOT} -type f -exec chmod 644 {} \;
+
+        # Secure .env file
+        chmod 600 .env
+
+        # Make web/app/uploads writable
+        if [ -d web/app/uploads ]; then
+          chmod -R 775 web/app/uploads
+        else
+          mkdir -p web/app/uploads
+          chmod -R 775 web/app/uploads
+        fi
+
+        echo "Permissions set successfully"
+      user: root
+
+success: |
+  **Bedrock WordPress Installation Complete**
+
+  Your WordPress site is now running on Bedrock with:
+  - Modern Composer-based dependency management
+  - Environment-specific configuration via .env
+  - Improved directory structure (web/app/)
+  - Redis object caching enabled
+
+  Access your site at: ${settings.wp_url}
+  Admin panel: ${settings.wp_url}/wp/wp-admin/

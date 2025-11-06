@@ -2,20 +2,22 @@
 <img src="images/wp-standalone.png" alt="WordPress Multi-Node LEMP Stack">
 </p>
 
-# WordPress Multi-Node LEMP Stack
+# WordPress Multi-Node LEMP Stack with Bedrock
 
-An automated WordPress deployment package for **Virtuozzo Application Platform** that creates a high-performance, scalable WordPress environment using a multi-node architecture inspired by **Roots.io Trellis** best practices.
+An automated WordPress deployment package for **Virtuozzo Application Platform** that creates a high-performance, scalable WordPress environment using **Roots.io Bedrock** and **Trellis** architecture across multiple nodes.
 
 ## What This Package Does
 
 This JPS (Jelastic Packaging Standard) manifest automatically provisions and configures a complete WordPress hosting environment across three separate nodes, providing:
 
-- **Automated Deployment**: One-click installation of a fully configured WordPress environment
+- **Bedrock WordPress**: Modern WordPress boilerplate with Composer dependency management
+- **Trellis Nginx Configuration**: Security-hardened Nginx configs following Roots.io best practices
+- **Automated Deployment**: One-click installation of a fully configured Bedrock environment
 - **Multi-Node Architecture**: Separates web, database, and cache layers for optimal performance
-- **Pre-Configured Services**: Nginx, PHP-FPM, MariaDB, and Redis configured specifically for WordPress
+- **Environment-Based Configuration**: Uses `.env` files for secure configuration management
 - **Flexible PHP Versions**: Choose between PHP 8.2, 8.3, or 8.4 during installation
 - **Production-Ready**: Includes Let's Encrypt SSL, optional CDN, WooCommerce, and WordPress Multisite support
-- **Network Optimized**: Nodes communicate securely over internal network for low latency
+- **Enhanced Security**: Protected sensitive files, proper directory structure, and security headers
 
 ## Architecture Overview
 
@@ -137,12 +139,15 @@ The package automatically performs these steps:
    - Configures Redis with 256MB cache and LRU eviction
    - Sets up PHP-FPM with WordPress-specific settings
    - Creates database and user with proper permissions
+   - Applies Trellis Nginx configuration for Bedrock
 
-4. **Install WordPress**
-   - Downloads latest WordPress
-   - Configures database connection to MariaDB node
-   - Configures Redis object caching
-   - Sets up admin account
+4. **Install Bedrock WordPress**
+   - Installs Composer for dependency management
+   - Creates Bedrock project via Composer
+   - Generates `.env` file with database and Redis configuration
+   - Installs WordPress core via WP-CLI
+   - Installs and enables Redis Object Cache plugin
+   - Sets up admin account with secure directory structure
 
 5. **Apply Optional Features**
    - Installs SSL certificates if selected
@@ -163,12 +168,15 @@ Once deployed, you'll receive:
 
 ### What's Pre-Configured
 
-✅ **WordPress Core**: Latest version installed and configured
-✅ **Database Connection**: Automatically connected to MariaDB node
-✅ **Object Caching**: Redis configured and ready (install Redis Object Cache plugin)
+✅ **Bedrock WordPress**: Modern boilerplate with improved directory structure (`web/`, `config/`)
+✅ **Composer**: Dependency management for plugins and WordPress core
+✅ **Environment Configuration**: `.env` file with database, Redis, and security keys
+✅ **Database Connection**: Automatically connected to MariaDB node via environment variables
+✅ **Object Caching**: Redis Object Cache plugin installed and activated
+✅ **Trellis Nginx**: Security-hardened configuration with proper Bedrock document root
 ✅ **PHP Settings**: Optimized for WordPress performance
 ✅ **MySQL Settings**: Configured for WordPress database patterns
-✅ **Security**: Firewall rules and isolated network communication
+✅ **Security**: Protected `.env`, `composer.json`, and vendor files; proper security headers
 
 ## Use Cases
 
@@ -183,12 +191,16 @@ This package is ideal for:
 
 ## Technical Details
 
-### Trellis-Inspired Architecture
+### Bedrock & Trellis Architecture
 
-This package follows [Roots.io Trellis](https://github.com/roots/trellis) principles:
+This package implements [Roots.io Bedrock](https://github.com/roots/bedrock) and [Trellis](https://github.com/roots/trellis) architecture:
 
+- **Bedrock WordPress**: Modern WordPress boilerplate with Composer
+- **Improved Directory Structure**: `web/` for public files, `config/` for WordPress configuration
+- **Environment Configuration**: `.env` files for secure configuration management
+- **Trellis Nginx**: Security-hardened Nginx configuration with Bedrock-specific settings
 - **LEMP Stack**: Linux, Nginx, MariaDB, PHP-FPM
-- **Modern PHP**: Support for latest PHP versions
+- **Modern PHP**: Support for latest PHP versions (8.2, 8.3, 8.4)
 - **Service Separation**: Web, database, and cache on separate nodes
 - **Network-Based Communication**: Services communicate via internal hostnames
 - **Production Best Practices**: Optimized configurations for each service

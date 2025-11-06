@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository has been restructured from a single-container WordPress deployment to a multi-node architecture following the **Roots.io Trellis** LEMP stack best practices.
+This repository implements a multi-node WordPress deployment using **Roots.io Bedrock** and **Trellis** architecture. It deploys WordPress using the modern Bedrock boilerplate with Composer dependency management and Trellis-style Nginx configuration across three separate nodes.
 
 ## Architecture Changes
 
@@ -117,15 +117,32 @@ This repository has been restructured from a single-container WordPress deployme
 - Firewall rules managed by the platform
 - Redis protected by internal network
 
-## Trellis Compatibility
+## Bedrock & Trellis Implementation
 
-This architecture follows Roots.io Trellis principles:
+This architecture fully implements Roots.io Bedrock and Trellis:
 
+### Bedrock Features
+1. **Composer Dependency Management**: WordPress core and plugins managed via Composer
+2. **Improved Directory Structure**:
+   - `web/` - Public document root (replaces traditional WordPress root)
+   - `web/app/` - WordPress content directory
+   - `config/` - WordPress configuration files
+   - `.env` - Environment-specific configuration
+3. **Environment Variables**: Database, Redis, and WordPress settings via `.env`
+4. **Enhanced Security**: Protected sensitive files, proper permissions
+5. **Modern Development Workflow**: Version control friendly structure
+
+### Trellis Features
 1. **Separation of Concerns**: Each service runs independently
 2. **LEMP Stack**: Nginx + PHP-FPM + MariaDB
-3. **Modern PHP**: Support for PHP 8.2, 8.3, 8.4
-4. **Redis Caching**: Object cache for improved performance
-5. **Best Practices**: Optimized configurations for each service
+3. **Security-Hardened Nginx**:
+   - Protected `.env` and `composer.json` files
+   - Prevented PHP execution in uploads
+   - Security headers (X-Frame-Options, CSP, etc.)
+   - Optimized static file caching
+4. **Modern PHP**: Support for PHP 8.2, 8.3, 8.4
+5. **Redis Caching**: Object cache for improved performance
+6. **Best Practices**: Optimized configurations for each service
 
 ## Benefits
 
