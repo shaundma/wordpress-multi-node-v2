@@ -287,12 +287,22 @@ actions:
       settings:
         targetGroup: cp
         optimization: wordpress
-    - log: "Enable Redis PHP extension"
+    - log: "Enable Redis and igbinary PHP extensions"
     - cmd[cp]: |-
+        # Enable igbinary PHP extension (required by Redis)
+        sed -i 's/^;extension=igbinary.so/extension=igbinary.so/' /etc/php.ini
+
         # Enable Redis PHP extension
         sed -i 's/^;extension=redis.so/extension=redis.so/' /etc/php.ini
 
-        # Verify extension is enabled
+        # Verify extensions are enabled
+        if grep -q "^extension=igbinary.so" /etc/php.ini; then
+          echo "igbinary PHP extension enabled"
+        else
+          echo "ERROR: Failed to enable igbinary PHP extension"
+          exit 1
+        fi
+
         if grep -q "^extension=redis.so" /etc/php.ini; then
           echo "Redis PHP extension enabled"
         else
@@ -302,7 +312,7 @@ actions:
 
         # Restart PHP-FPM to apply changes
         systemctl restart php-fpm
-        echo "PHP-FPM restarted"
+        echo "PHP-FPM restarted with Redis and igbinary extensions"
       user: root
     - log: "Setup Database Node"
     - cmd[sqldb]: |-
