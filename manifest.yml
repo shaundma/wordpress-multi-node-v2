@@ -250,13 +250,24 @@ actions:
     - cmd[sqldb]: |-
         echo "Setting up database user and creating wordpress database..."
 
-        # Download setup script
-        wget -q https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/scripts/setupUser.sh -O ~/setupUser.sh
-        bash ~/setupUser.sh ${globals.DB_USER} ${globals.DB_PASS} 2>&1 | tee -a /var/log/run.log
+        # Get MySQL root password from Jelastic
+        ROOT_PASS=$(awk -F "=" '/password/ {print $2}' /root/.my.cnf 2>/dev/null | tr -d ' ' | tr -d '\n')
+
+        if [ -z "$ROOT_PASS" ]; then
+          # Try alternative location
+          ROOT_PASS=$(cat /var/lib/jelastic/keys/password.txt 2>/dev/null | tr -d '\n')
+        fi
+
+        if [ -z "$ROOT_PASS" ]; then
+          echo "ERROR: Could not find MySQL root password"
+          exit 1
+        fi
+
+        echo "Found MySQL root password"
 
         # Create wordpress database
         echo "Creating wordpress database..."
-        mysql -uroot -e "CREATE DATABASE IF NOT EXISTS wordpress CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>&1
+        mysql -uroot -p"$ROOT_PASS" -e "CREATE DATABASE IF NOT EXISTS wordpress CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>&1
 
         if [ $? -eq 0 ]; then
           echo "Database 'wordpress' created successfully"
@@ -266,28 +277,33 @@ actions:
         fi
 
         # Verify database exists
-        DB_EXISTS=$(mysql -uroot -e "SHOW DATABASES LIKE 'wordpress';" | grep wordpress)
+        DB_EXISTS=$(mysql -uroot -p"$ROOT_PASS" -e "SHOW DATABASES LIKE 'wordpress';" | grep wordpress)
         if [ -z "$DB_EXISTS" ]; then
           echo "ERROR: Database 'wordpress' does not exist after creation"
           exit 1
         fi
         echo "Verified: Database 'wordpress' exists"
 
-        # Grant privileges
-        echo "Granting privileges to ${globals.DB_USER}..."
-        mysql -uroot -e "GRANT ALL PRIVILEGES ON wordpress.* TO '${globals.DB_USER}'@'%' IDENTIFIED BY '${globals.DB_PASS}';" 2>&1
-        mysql -uroot -e "GRANT ALL PRIVILEGES ON *.* TO '${globals.DB_USER}'@'%' IDENTIFIED BY '${globals.DB_PASS}';" 2>&1
-        mysql -uroot -e "FLUSH PRIVILEGES;" 2>&1
+        # Create user and grant privileges
+        echo "Creating user ${globals.DB_USER} and granting privileges..."
+        mysql -uroot -p"$ROOT_PASS" -e "CREATE USER IF NOT EXISTS '${globals.DB_USER}'@'%' IDENTIFIED BY '${globals.DB_PASS}';" 2>&1
+        mysql -uroot -p"$ROOT_PASS" -e "GRANT ALL PRIVILEGES ON wordpress.* TO '${globals.DB_USER}'@'%';" 2>&1
+        mysql -uroot -p"$ROOT_PASS" -e "GRANT ALL PRIVILEGES ON *.* TO '${globals.DB_USER}'@'%';" 2>&1
+        mysql -uroot -p"$ROOT_PASS" -e "FLUSH PRIVILEGES;" 2>&1
 
         # Verify user can access the database
-        if mysql -u${globals.DB_USER} -p${globals.DB_PASS} -e "USE wordpress; SELECT 1;" 2>&1; then
+        if mysql -u${globals.DB_USER} -p${globals.DB_PASS} -e "USE wordpress; SELECT 1;" 2>&1 | grep -q "1"; then
           echo "Verified: User ${globals.DB_USER} can access wordpress database"
         else
           echo "ERROR: User ${globals.DB_USER} cannot access wordpress database"
+          echo "Testing connection details:"
+          mysql -u${globals.DB_USER} -p${globals.DB_PASS} -e "SELECT USER(), DATABASE();" 2>&1
           exit 1
         fi
 
-        jem passwd set -p ${globals.DB_PASS} &>> /var/log/run.log
+        # Set Jelastic password
+        jem passwd set -p ${globals.DB_PASS} 2>&1 | grep -i "success"
+
         echo "Database setup completed successfully"
       user: root
 
