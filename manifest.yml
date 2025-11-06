@@ -246,13 +246,15 @@ actions:
       user: root
         
   createUserDB:
-    - log: Create user for Database
+    - log: Create user and database
     - cmd[sqldb]: |-
         wget https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/master/scripts/setupUser.sh -O ~/setupUser.sh &>> /var/log/run.log
         bash ~/setupUser.sh ${globals.DB_USER} ${globals.DB_PASS} &>> /var/log/run.log
+        mysql -uroot -e "CREATE DATABASE IF NOT EXISTS wordpress CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" &>> /var/log/run.log
         mysql -uroot -e "GRANT ALL PRIVILEGES ON *.* TO '${globals.DB_USER}'@'%' IDENTIFIED BY '${globals.DB_PASS}';" &>> /var/log/run.log
         mysql -uroot -e "FLUSH PRIVILEGES;" &>> /var/log/run.log
         jem passwd set -p ${globals.DB_PASS} &>> /var/log/run.log
+        echo "Database user and wordpress database created successfully"
       user: root
 
   configureRedis:

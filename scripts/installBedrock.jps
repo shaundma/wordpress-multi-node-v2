@@ -121,23 +121,18 @@ actions:
           echo "ERROR: Failed to create .env file"
           exit 1
         fi
-
-        # Create WordPress database if it doesn't exist
-        echo "Creating WordPress database..."
-        mysql -h${settings.db_host} -u${settings.db_user} -p${settings.db_pass} -e "CREATE DATABASE IF NOT EXISTS wordpress CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>&1
-
-        if [ $? -eq 0 ]; then
-          echo "Database 'wordpress' ready"
-        else
-          echo "ERROR: Failed to create database"
-          exit 1
-        fi
       user: root
 
   installWordPress:
     - log: "Configuring WordPress site via WP-CLI"
     - cmd[cp]: |-
         cd ${globals.WEBROOT}
+
+        # Install MySQL client if not present (required for WP-CLI database operations)
+        if ! command -v mysql &> /dev/null; then
+          echo "Installing MySQL client..."
+          yum install -y mysql 2>&1 || apt-get install -y mysql-client 2>&1
+        fi
 
         # Install WP-CLI if not present
         if [ ! -f /usr/local/bin/wp ]; then
@@ -155,16 +150,31 @@ actions:
 
         echo "WordPress core files found: $(wp core version --allow-root)"
 
-        # Test database connection
+        # Test database connection with more debugging
         echo "Testing database connection..."
-        if ! wp db check --allow-root 2>/dev/null; then
-          echo "ERROR: Cannot connect to database"
+        echo "Attempting to connect to: ${settings.db_host}"
+
+        # Try direct mysql connection first
+        if mysql -h${settings.db_host} -u${settings.db_user} -p${settings.db_pass} -e "SELECT 1;" wordpress 2>&1; then
+          echo "Direct MySQL connection: OK"
+        else
+          echo "ERROR: Direct MySQL connection failed"
+          echo "This indicates the database or user may not be properly configured"
+          exit 1
+        fi
+
+        # Now test with WP-CLI
+        if ! wp db check --allow-root 2>&1; then
+          echo "ERROR: WP-CLI cannot connect to database"
           echo "Database: wordpress"
           echo "Host: ${settings.db_host}"
           echo "User: ${settings.db_user}"
+          echo ""
+          echo "Checking .env file:"
+          grep "^DB_" .env
           exit 1
         fi
-        echo "Database connection: OK"
+        echo "WP-CLI database connection: OK"
 
         # Check if WordPress is already installed
         if wp core is-installed --allow-root 2>/dev/null; then
