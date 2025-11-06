@@ -34,9 +34,16 @@ actions:
         wget -O /etc/nginx/conf.d/bedrock-site.conf \
           https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/configs/nginx/bedrock-site.conf
 
-        # Remove default WordPress config if present
+        # Disable default Nginx config if present
+        if [ -f /etc/nginx/conf.d/sites-enabled/default.conf ]; then
+          mv /etc/nginx/conf.d/sites-enabled/default.conf /etc/nginx/conf.d/sites-enabled/default.conf.disabled
+          echo "Disabled default Nginx configuration"
+        fi
+
+        # Disable default WordPress config if present
         if [ -f /etc/nginx/conf.d/wordpress.conf ]; then
           mv /etc/nginx/conf.d/wordpress.conf /etc/nginx/conf.d/wordpress.conf.disabled
+          echo "Disabled WordPress default configuration"
         fi
 
         # Verify the config was downloaded
