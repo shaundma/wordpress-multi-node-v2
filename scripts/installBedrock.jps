@@ -100,6 +100,18 @@ actions:
         # Replace the salts placeholder with actual salts
         sed -i "s|\$SALTS|$SALTS|g" .env
 
+        # Remove any leading/trailing whitespace from each line
+        sed -i 's/^[[:space:]]*//;s/[[:space:]]*$//' .env
+
+        # Create wp-cli.yml for Bedrock
+        cat > wp-cli.yml << 'WPCLIEOF'
+path: web/wp
+require:
+  - vendor/autoload.php
+WPCLIEOF
+
+        echo "Created wp-cli.yml configuration for Bedrock"
+
         # Verify .env was created
         if [ -f .env ]; then
           echo ".env file created successfully"
@@ -163,18 +175,34 @@ actions:
           exit 1
         fi
 
-        # Now test with WP-CLI
-        if ! wp db check --allow-root 2>&1; then
+        # Debug: Check what WP-CLI sees
+        echo "Debugging WP-CLI configuration..."
+        wp cli info --allow-root 2>&1 || echo "WP-CLI info failed"
+
+        # Check if wp-cli.yml exists
+        if [ -f wp-cli.yml ]; then
+          echo "wp-cli.yml found"
+          cat wp-cli.yml
+        else
+          echo "WARNING: wp-cli.yml not found"
+        fi
+
+        # Test WP-CLI database connection with error output
+        echo "Testing WP-CLI database connection..."
+        WP_DB_CHECK=$(wp db check --allow-root 2>&1)
+        if echo "$WP_DB_CHECK" | grep -q "Success"; then
+          echo "WP-CLI database connection: OK"
+        else
           echo "ERROR: WP-CLI cannot connect to database"
-          echo "Database: wordpress"
-          echo "Host: ${settings.db_host}"
-          echo "User: ${settings.db_user}"
+          echo "WP-CLI output: $WP_DB_CHECK"
           echo ""
           echo "Checking .env file:"
           grep "^DB_" .env
+          echo ""
+          echo "Checking if autoloader exists:"
+          ls -la vendor/autoload.php
           exit 1
         fi
-        echo "WP-CLI database connection: OK"
 
         # Check if WordPress is already installed
         if wp core is-installed --allow-root 2>/dev/null; then
