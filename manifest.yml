@@ -287,6 +287,23 @@ actions:
       settings:
         targetGroup: cp
         optimization: wordpress
+    - log: "Enable Redis PHP extension"
+    - cmd[cp]: |-
+        # Enable Redis PHP extension
+        sed -i 's/^;extension=redis.so/extension=redis.so/' /etc/php.ini
+
+        # Verify extension is enabled
+        if grep -q "^extension=redis.so" /etc/php.ini; then
+          echo "Redis PHP extension enabled"
+        else
+          echo "ERROR: Failed to enable Redis PHP extension"
+          exit 1
+        fi
+
+        # Restart PHP-FPM to apply changes
+        systemctl restart php-fpm
+        echo "PHP-FPM restarted"
+      user: root
     - log: "Setup Database Node"
     - cmd[sqldb]: |-
         wget ${baseUrl}/configs/sqldb/wordpress.cnf -O /etc/mysql/conf.d/wordpress.cnf &>> /var/log/run.log || true
