@@ -311,8 +311,8 @@ actions:
         cd app
         ln -sfn $WEBROOT/shared/uploads uploads
 
-        # Create default index.php
-        cat > $WEBROOT/current/web/wp/index.php << 'PHPEOF'
+        # Create default index.php using echo to avoid heredoc issues
+        cat > $WEBROOT/current/web/wp/index.php << 'ENDOFFILE'
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -386,14 +386,14 @@ actions:
                 <div class="info-box">
                     <h2>🔧 Services Available</h2>
                     <div class="info-item">✅ Nginx web server</div>
-                    <div class="info-item">✅ PHP-FPM <?php echo PHP_VERSION; ?></div>
+                    <div class="info-item">✅ PHP-FPM</div>
                     <div class="info-item">✅ MariaDB database</div>
                     <div class="info-item">✅ Redis object cache</div>
                 </div>
             </div>
         </body>
         </html>
-        PHPEOF
+        ENDOFFILE
 
         # Create .env file with credentials in shared directory
         cat > $WEBROOT/shared/.env << 'ENVEOF'
