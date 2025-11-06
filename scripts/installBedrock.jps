@@ -105,18 +105,18 @@ actions:
           echo ".env file created successfully"
 
           # Verify variables were properly substituted (not literal strings)
-          if grep -q '\${settings\.' .env; then
+          if grep -q 'settings' .env; then
             echo "ERROR: Variables not expanded in .env file"
             echo "Found literal JPS variables:"
-            grep '\${settings\.' .env
+            grep 'settings' .env
             exit 1
           fi
 
           # Show sanitized config for verification
-          echo "Database user: $(grep DB_USER .env | cut -d= -f2 | tr -d "'")"
-          echo "Database host: $(grep DB_HOST .env | cut -d= -f2 | tr -d "'")"
-          echo "WordPress URL: $(grep WP_HOME .env | cut -d= -f2 | tr -d "'")"
-          echo "Redis host: $(grep WP_REDIS_HOST .env | cut -d= -f2 | tr -d "'")"
+          echo "Database user: $(grep DB_USER .env | cut -d= -f2 | tr -d \')"
+          echo "Database host: $(grep DB_HOST .env | cut -d= -f2 | tr -d \')"
+          echo "WordPress URL: $(grep WP_HOME .env | cut -d= -f2 | tr -d \')"
+          echo "Redis host: $(grep WP_REDIS_HOST .env | cut -d= -f2 | tr -d \')"
         else
           echo "ERROR: Failed to create .env file"
           exit 1
