@@ -69,8 +69,8 @@ actions:
         echo "Generating WordPress security salts..."
         SALTS=$(curl -s https://api.wordpress.org/secret-key/1.1/salt/)
 
-        # Create .env file
-        cat > .env << 'ENVEOF'
+        # Create .env file with proper variable substitution
+        cat > .env << ENVEOF
         # Database Configuration
         DB_NAME='wordpress'
         DB_USER='${settings.db_user}'
@@ -84,13 +84,7 @@ actions:
         WP_SITEURL='${settings.wp_url}/wp'
 
         # WordPress Salts
-        ENVEOF
-
-        # Append salts
-        echo "$SALTS" >> .env
-
-        # Redis Configuration
-        cat >> .env << 'ENVEOF'
+        \$SALTS
 
         # Redis Configuration
         WP_REDIS_HOST='${settings.redis_host}'
@@ -103,13 +97,26 @@ actions:
         DISALLOW_FILE_EDIT=true
         ENVEOF
 
+        # Replace the salts placeholder with actual salts
+        sed -i "s|\$SALTS|$SALTS|g" .env
+
         # Verify .env was created
         if [ -f .env ]; then
           echo ".env file created successfully"
-          # Don't show full content for security, just confirm key variables
-          grep -q "DB_NAME" .env && echo "Database config: OK"
-          grep -q "WP_HOME" .env && echo "URL config: OK"
-          grep -q "WP_REDIS_HOST" .env && echo "Redis config: OK"
+
+          # Verify variables were properly substituted (not literal strings)
+          if grep -q '\${settings\.' .env; then
+            echo "ERROR: Variables not expanded in .env file"
+            echo "Found literal JPS variables:"
+            grep '\${settings\.' .env
+            exit 1
+          fi
+
+          # Show sanitized config for verification
+          echo "Database user: $(grep DB_USER .env | cut -d= -f2 | tr -d "'")"
+          echo "Database host: $(grep DB_HOST .env | cut -d= -f2 | tr -d "'")"
+          echo "WordPress URL: $(grep WP_HOME .env | cut -d= -f2 | tr -d "'")"
+          echo "Redis host: $(grep WP_REDIS_HOST .env | cut -d= -f2 | tr -d "'")"
         else
           echo "ERROR: Failed to create .env file"
           exit 1
