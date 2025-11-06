@@ -41,15 +41,30 @@ actions:
         if [ -f /etc/nginx/conf.d/ssl.conf.disabled ]; then
           # Check if .disabled contains the real config (has sites-enabled include)
           if grep -q "sites-enabled" /etc/nginx/conf.d/ssl.conf.disabled; then
-            echo "Found good ssl.conf renamed to ssl.conf.disabled - restoring..."
-            # Save the dummy ssl.conf
-            if [ -f /etc/nginx/conf.d/ssl.conf ]; then
-              mv /etc/nginx/conf.d/ssl.conf /etc/nginx/conf.d/ssl.conf.dummy
-              echo "Saved dummy ssl.conf as ssl.conf.dummy"
+            # Check if SSL certificate files exist
+            if [ -f /var/lib/jelastic/SSL/jelastic.chain ] && [ -f /var/lib/jelastic/SSL/jelastic.key ]; then
+              echo "Found good ssl.conf renamed to ssl.conf.disabled - restoring..."
+              # Save the dummy ssl.conf
+              if [ -f /etc/nginx/conf.d/ssl.conf ]; then
+                mv /etc/nginx/conf.d/ssl.conf /etc/nginx/conf.d/ssl.conf.dummy
+                echo "Saved dummy ssl.conf as ssl.conf.dummy"
+              fi
+              # Restore the good config
+              mv /etc/nginx/conf.d/ssl.conf.disabled /etc/nginx/conf.d/ssl.conf
+              echo "Restored good ssl.conf with sites-enabled include"
+            else
+              echo "SSL certificates not yet available - creating temporary ssl.conf with sites-enabled include"
+              # Save the dummy ssl.conf
+              if [ -f /etc/nginx/conf.d/ssl.conf ]; then
+                mv /etc/nginx/conf.d/ssl.conf /etc/nginx/conf.d/ssl.conf.dummy
+                echo "Saved dummy ssl.conf as ssl.conf.dummy"
+              fi
+              # Copy the good config and comment out SSL certificate lines
+              cp /etc/nginx/conf.d/ssl.conf.disabled /etc/nginx/conf.d/ssl.conf
+              sed -i 's/^\s*ssl_certificate/#    ssl_certificate/g' /etc/nginx/conf.d/ssl.conf
+              echo "Created temporary ssl.conf with SSL cert lines commented out"
+              echo "This will be replaced when SSL certificates are installed"
             fi
-            # Restore the good config
-            mv /etc/nginx/conf.d/ssl.conf.disabled /etc/nginx/conf.d/ssl.conf
-            echo "Restored good ssl.conf with sites-enabled include"
           fi
         fi
 
