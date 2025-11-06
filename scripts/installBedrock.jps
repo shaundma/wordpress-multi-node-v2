@@ -194,12 +194,42 @@ actions:
         echo "Checking Bedrock file structure..."
         echo "web/wp-config.php: $([ -f web/wp-config.php ] && echo 'EXISTS' || echo 'MISSING')"
         echo "config/application.php: $([ -f config/application.php ] && echo 'EXISTS' || echo 'MISSING')"
+        echo ".env: $([ -f .env ] && echo 'EXISTS' || echo 'MISSING')"
 
-        # Show wp-config.php if it exists
-        if [ -f web/wp-config.php ]; then
-          echo "Content of web/wp-config.php:"
-          cat web/wp-config.php
+        # Check .env file permissions and content
+        if [ -f .env ]; then
+          echo ".env permissions: $(ls -l .env)"
+          echo ".env first 5 lines:"
+          head -5 .env
+          echo ""
         fi
+
+        # Verify Dotenv is installed
+        echo "Checking Dotenv installation..."
+        if [ -d vendor/vlucas/phpdotenv ]; then
+          echo "Dotenv package: INSTALLED"
+        else
+          echo "ERROR: Dotenv package NOT FOUND"
+          echo "This is required for Bedrock to load .env file"
+          exit 1
+        fi
+
+        # Test loading .env with PHP directly
+        echo "Testing .env loading with PHP..."
+        php -r "
+        require 'vendor/autoload.php';
+        try {
+          \$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+          \$dotenv->load();
+          echo 'Dotenv load: SUCCESS\n';
+          echo 'DB_NAME=' . getenv('DB_NAME') . '\n';
+          echo 'DB_HOST=' . getenv('DB_HOST') . '\n';
+        } catch (Exception \$e) {
+          echo 'Dotenv load: FAILED\n';
+          echo 'Error: ' . \$e->getMessage() . '\n';
+          exit(1);
+        }
+        "
 
         # Test WP-CLI database connection with error output
         echo "Testing WP-CLI database connection..."
