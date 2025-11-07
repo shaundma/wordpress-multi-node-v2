@@ -54,8 +54,6 @@ settings:
       value: false
       disabled: false
       tooltip: "WooCommerce is a free open-source e-commerce plugin designed specifically for WordPress. This is a great platform for a store of any size."
-      showIf:
-        wp-addon: true
 
     - caption: Install WordPress Multisite Network
       type: checkbox
@@ -63,8 +61,6 @@ settings:
       value: false
       disabled: false
       tooltip: "Multisite is a type of WordPress installation that allows you to create and manage a network of multiple websites from a single WordPress dashboard. This lets you easily make changes and keep all of your websites updated from one place."
-      showIf:
-        wp-addon: true
 
     - caption: Install Let's Encrypt SSL with Auto-Renewal
       type: checkbox

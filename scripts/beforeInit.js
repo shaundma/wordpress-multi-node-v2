@@ -20,6 +20,20 @@ if (isCDN.result == 0 || isCDN.result == Response.PERMISSION_DENIED) {
   fields["cdn-addon"].value = false;
 }
 
+// Add onChange handler to wp-addon checkbox to show/hide WooCommerce and Multisite
+fields["wp-addon"].onChange = function(value) {
+  return {
+    "woocommerce": { "hidden": !value },
+    "mu-addon": { "hidden": !value }
+  };
+};
+
+// Initially hide WooCommerce and Multisite if WordPress is not checked
+if (!fields["wp-addon"].value) {
+  fields["woocommerce"].hidden = true;
+  fields["mu-addon"].hidden = true;
+}
+
 return {
     result: 0,
     settings: settings
