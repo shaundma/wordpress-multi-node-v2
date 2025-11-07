@@ -481,7 +481,7 @@ actions:
   installWoocommerce:
     - log: "Installing WooCommerce for Bedrock"
     - cmd[${nodes.cp.master.id}]: |-
-        cd /var/www/webroot/ROOT
+        cd /var/www/webroot/ROOT/current
         composer require wpackagist-plugin/woocommerce:${globals.version_woocommerce} &>> /var/log/run.log
         wp plugin activate woocommerce --allow-root &>> /var/log/run.log
       user: root
