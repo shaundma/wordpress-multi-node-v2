@@ -425,7 +425,7 @@ actions:
         echo "After configuration:"
         grep -E "^zend_extension.*opcache|^opcache.enable" /etc/php.ini | head -5
 
-        if grep -q "^zend_extension.*opcache\.so" /etc/php.ini && grep -q "^opcache.enable=1" /etc/php.ini; then
+        if grep -q "^zend_extension.*opcache\.so" /etc/php.ini && grep -E "^opcache.enable\s*=\s*1" /etc/php.ini; then
           echo "OPcache enabled and configured for WordPress"
         else
           echo "ERROR: Failed to enable OPcache"
