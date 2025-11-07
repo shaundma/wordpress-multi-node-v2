@@ -6,11 +6,10 @@ Use the following credentials to access the admin panel:
 **Login**: ${user.email}
 **Password**: ${globals.WP_ADMIN_PASS}
 
-Manage the database nodes using the next credentials:
-
-**phpMyAdmin Panel**: [https://${env.domain}:8443/](https://${env.domain}:8443/)
+**Database Credentials**:
 **Username**: ${globals.DB_USER}
 **Password**: ${globals.DB_PASS}
+**Host**: ${globals.DB_HOST}
 
 **Architecture**: Multi-node LEMP stack (Nginx + PHP-FPM, MariaDB, Redis)
 

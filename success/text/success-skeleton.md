@@ -29,9 +29,8 @@ Your multi-node LEMP stack has been successfully configured!
     └── 1/ (current release)
 ```
 
-## Database Access
+## Database & Redis Credentials
 
-- **phpMyAdmin**: https://${env.domain}:8443/
-- **Credentials**: See `/var/www/webroot/ROOT/shared/.env`
+All database and Redis credentials are stored in `/var/www/webroot/ROOT/shared/.env`
 
 The environment follows Bedrock directory structure and is ready for your WordPress deployment!

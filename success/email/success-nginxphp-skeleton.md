@@ -7,10 +7,10 @@ Your multi-node LEMP stack is configured and ready for deployment.
 - **Credentials File**: /var/www/webroot/ROOT/shared/.env
 - **Architecture**: Multi-node LEMP stack (Nginx + PHP-FPM, MariaDB, Redis)
 
-**Database Access**:
-**phpMyAdmin Panel**: [https://${env.domain}:8443/](https://${env.domain}:8443/)
+**Database Credentials**:
 **Username**: ${globals.DB_USER}
 **Password**: ${globals.DB_PASS}
+**Host**: ${globals.DB_HOST}
 
 **Redis**:
 **Host**: ${globals.REDIS_HOST}
