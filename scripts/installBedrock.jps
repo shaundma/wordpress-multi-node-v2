@@ -8,7 +8,6 @@ globals:
   BEDROCK_REPO: https://github.com/roots/bedrock.git
 
 onInstall:
-  - installComposer
   - createDirectoryStructure
   - installBedrock
   - createSymlinks
@@ -19,16 +18,6 @@ onInstall:
   - setPermissions
 
 actions:
-  installComposer:
-    - log: "Installing Composer"
-    - cmd[cp]: |-
-        if [ ! -f /usr/local/bin/composer ]; then
-          wget https://getcomposer.org/download/latest-stable/composer.phar -O /usr/local/bin/composer
-          chmod +x /usr/local/bin/composer
-        fi
-        composer --version
-      user: root
-
   createDirectoryStructure:
     - log: "Creating deployment directory structure"
     - cmd[cp]: |-

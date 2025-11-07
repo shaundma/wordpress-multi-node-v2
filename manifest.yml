@@ -105,6 +105,7 @@ onInstall:
   - getUserInfo
   - initLEsettings
   - setupNodes
+  - installComposer
   - if (${globals.isSingleDeploy}):
     - setProtocol
     - setDomain
@@ -178,6 +179,20 @@ actions:
           }
         }
       };
+
+  installComposer:
+    - log: "Installing Composer"
+    - cmd[cp]: |-
+        if [ ! -f /usr/local/bin/composer ]; then
+          echo "Downloading and installing Composer..."
+          wget https://getcomposer.org/download/latest-stable/composer.phar -O /usr/local/bin/composer
+          chmod +x /usr/local/bin/composer
+          echo "Composer installed successfully"
+        else
+          echo "Composer already installed"
+        fi
+        composer --version
+      user: root
 
   setProtocol:
     - script: |
