@@ -20,17 +20,6 @@ if (isCDN.result == 0 || isCDN.result == Response.PERMISSION_DENIED) {
   fields["cdn-addon"].value = false;
 }
 
-// Set WooCommerce and Multisite to depend on WordPress checkbox
-fields["woocommerce"].dependsOn = {
-  field: "wp-addon",
-  value: true
-};
-
-fields["mu-addon"].dependsOn = {
-  field: "wp-addon",
-  value: true
-};
-
 return {
     result: 0,
     settings: settings
