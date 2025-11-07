@@ -391,8 +391,8 @@ actions:
         # Enable and configure OPcache for optimal WordPress performance
         echo "Configuring OPcache for WordPress..."
 
-        # Enable OPcache
-        sed -i 's/^;zend_extension=opcache.so/zend_extension=opcache.so/' /etc/php.ini
+        # Enable OPcache extension (uncomment zend_extension line)
+        sed -i 's|^; zend_extension=/usr/lib64/php/modules/opcache.so|zend_extension=/usr/lib64/php/modules/opcache.so|' /etc/php.ini
         sed -i 's/^;opcache.enable=.*/opcache.enable=1/' /etc/php.ini
         sed -i 's/^;opcache.enable_cli=.*/opcache.enable_cli=0/' /etc/php.ini
 
@@ -405,10 +405,12 @@ actions:
         sed -i 's/^;opcache.fast_shutdown=.*/opcache.fast_shutdown=1/' /etc/php.ini
 
         # Verify OPcache is enabled
-        if grep -q "^zend_extension=opcache.so" /etc/php.ini || grep -q "^opcache.enable=1" /etc/php.ini; then
+        if grep -q "^zend_extension=/usr/lib64/php/modules/opcache.so" /etc/php.ini && grep -q "^opcache.enable=1" /etc/php.ini; then
           echo "OPcache enabled and configured for WordPress"
+          php -v | grep -i opcache || echo "OPcache module verification pending (will load after PHP-FPM restart)"
         else
-          echo "WARNING: Could not verify OPcache configuration"
+          echo "ERROR: Failed to enable OPcache"
+          exit 1
         fi
 
         # Restart PHP-FPM to apply changes
