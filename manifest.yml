@@ -391,8 +391,25 @@ actions:
         # Enable and configure OPcache for optimal WordPress performance
         echo "Configuring OPcache for WordPress..."
 
-        # Enable OPcache extension (uncomment zend_extension line)
-        sed -i 's|^; zend_extension=/usr/lib64/php/modules/opcache.so|zend_extension=/usr/lib64/php/modules/opcache.so|' /etc/php.ini
+        # Debug: Show current OPcache lines
+        echo "Current OPcache configuration in php.ini:"
+        grep -E "zend_extension.*opcache|^;.*zend_extension.*opcache" /etc/php.ini | head -5
+
+        # Enable OPcache extension - try multiple patterns to handle variations
+        # Pattern 1: ; zend_extension=/usr/lib64/php/modules/opcache.so
+        sed -i 's|^;\s*zend_extension=/usr/lib64/php/modules/opcache.so|zend_extension=/usr/lib64/php/modules/opcache.so|' /etc/php.ini
+        # Pattern 2: ;zend_extension=/usr/lib64/php/modules/opcache.so (no space)
+        sed -i 's|^;zend_extension=/usr/lib64/php/modules/opcache.so|zend_extension=/usr/lib64/php/modules/opcache.so|' /etc/php.ini
+        # Pattern 3: ; zend_extension=opcache (short form)
+        sed -i 's|^;\s*zend_extension=opcache|zend_extension=/usr/lib64/php/modules/opcache.so|' /etc/php.ini
+
+        # If still not present, add it
+        if ! grep -q "^zend_extension.*opcache\.so" /etc/php.ini; then
+          echo "Adding zend_extension line for OPcache..."
+          sed -i '/^\[opcache\]/a zend_extension=/usr/lib64/php/modules/opcache.so' /etc/php.ini
+        fi
+
+        # Enable opcache.enable setting
         sed -i 's/^;opcache.enable=.*/opcache.enable=1/' /etc/php.ini
         sed -i 's/^;opcache.enable_cli=.*/opcache.enable_cli=0/' /etc/php.ini
 
@@ -405,11 +422,15 @@ actions:
         sed -i 's/^;opcache.fast_shutdown=.*/opcache.fast_shutdown=1/' /etc/php.ini
 
         # Verify OPcache is enabled
-        if grep -q "^zend_extension=/usr/lib64/php/modules/opcache.so" /etc/php.ini && grep -q "^opcache.enable=1" /etc/php.ini; then
+        echo "After configuration:"
+        grep -E "^zend_extension.*opcache|^opcache.enable" /etc/php.ini | head -5
+
+        if grep -q "^zend_extension.*opcache\.so" /etc/php.ini && grep -q "^opcache.enable=1" /etc/php.ini; then
           echo "OPcache enabled and configured for WordPress"
-          php -v | grep -i opcache || echo "OPcache module verification pending (will load after PHP-FPM restart)"
         else
           echo "ERROR: Failed to enable OPcache"
+          echo "Showing relevant lines from php.ini:"
+          grep -E "zend_extension.*opcache|opcache.enable" /etc/php.ini | head -10
           exit 1
         fi
 
