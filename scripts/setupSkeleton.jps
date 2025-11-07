@@ -60,7 +60,7 @@ actions:
     - log: "Creating placeholder index.php"
     - cmd[cp]: |-
         echo "Creating index.php in web directory..."
-        echo '<html><body><h1>Environment Ready</h1><p>Your Bedrock-compatible environment is ready.</p><p>Credentials: /var/www/webroot/ROOT/shared/.env</p><p>Deploy to: /var/www/webroot/ROOT/releases/1</p></body></html>' > ${globals.WEBROOT}/releases/1/web/index.php
+        echo '<html><body><h1>Environment Ready</h1><p>Your Bedrock-compatible environment is ready for deployment.</p></body></html>' > ${globals.WEBROOT}/releases/1/web/index.php
 
         # Verify index.php was created
         if [ -f ${globals.WEBROOT}/releases/1/web/index.php ]; then
