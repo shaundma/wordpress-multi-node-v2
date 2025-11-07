@@ -320,7 +320,7 @@ actions:
       settings:
         targetGroup: cp
         optimization: wordpress
-    - log: "Enable Redis, igbinary, intl, gd, and imagick PHP extensions"
+    - log: "Enable and configure PHP extensions (Redis, igbinary, intl, gd, imagick, OPcache)"
     - cmd[cp]: |-
         # Enable igbinary PHP extension (required by Redis)
         sed -i 's/^;extension=igbinary.so/extension=igbinary.so/' /etc/php.ini
@@ -369,9 +369,32 @@ actions:
           exit 1
         fi
 
+        # Enable and configure OPcache for optimal WordPress performance
+        echo "Configuring OPcache for WordPress..."
+
+        # Enable OPcache
+        sed -i 's/^;zend_extension=opcache.so/zend_extension=opcache.so/' /etc/php.ini
+        sed -i 's/^;opcache.enable=.*/opcache.enable=1/' /etc/php.ini
+        sed -i 's/^;opcache.enable_cli=.*/opcache.enable_cli=0/' /etc/php.ini
+
+        # Configure OPcache settings for WordPress
+        sed -i 's/^;opcache.memory_consumption=.*/opcache.memory_consumption=256/' /etc/php.ini
+        sed -i 's/^;opcache.interned_strings_buffer=.*/opcache.interned_strings_buffer=16/' /etc/php.ini
+        sed -i 's/^;opcache.max_accelerated_files=.*/opcache.max_accelerated_files=10000/' /etc/php.ini
+        sed -i 's/^;opcache.validate_timestamps=.*/opcache.validate_timestamps=1/' /etc/php.ini
+        sed -i 's/^;opcache.revalidate_freq=.*/opcache.revalidate_freq=2/' /etc/php.ini
+        sed -i 's/^;opcache.fast_shutdown=.*/opcache.fast_shutdown=1/' /etc/php.ini
+
+        # Verify OPcache is enabled
+        if grep -q "^zend_extension=opcache.so" /etc/php.ini || grep -q "^opcache.enable=1" /etc/php.ini; then
+          echo "OPcache enabled and configured for WordPress"
+        else
+          echo "WARNING: Could not verify OPcache configuration"
+        fi
+
         # Restart PHP-FPM to apply changes
         systemctl restart php-fpm
-        echo "PHP-FPM restarted with Redis, igbinary, intl, gd, and imagick extensions"
+        echo "PHP-FPM restarted with Redis, igbinary, intl, gd, imagick, and OPcache"
       user: root
     - log: "Setup Database Node"
     - cmd[sqldb]: |-
