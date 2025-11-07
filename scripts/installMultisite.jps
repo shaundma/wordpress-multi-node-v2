@@ -1,0 +1,103 @@
+---
+jpsType: update
+name: Install WordPress Multisite for Bedrock
+description: Configures WordPress Multisite on Bedrock installation
+
+globals:
+  WEBROOT: /var/www/webroot/ROOT
+  MULTISITE_MODE: ${settings.mode:subdir}
+
+onInstall:
+  - enableMultisite
+  - convertToMultisite
+  - updateEnvFile
+
+actions:
+  enableMultisite:
+    - log: "Enabling WordPress Multisite in configuration"
+    - cmd[cp]: |-
+        cd ${globals.WEBROOT}/current
+
+        echo "Enabling Multisite in application.php..."
+
+        # Check if already enabled
+        if grep -q "MULTISITE" config/application.php; then
+          echo "Multisite already enabled in application.php"
+        else
+          # Add multisite configuration before the Config::apply() line
+          sed -i "/Config::apply/i\\
+        \\
+        /* Multisite */\\
+        Config::define('WP_ALLOW_MULTISITE', true);" config/application.php
+
+          echo "Multisite enabled in application.php"
+        fi
+      user: root
+
+  convertToMultisite:
+    - log: "Converting WordPress to Multisite network"
+    - cmd[cp]: |-
+        cd ${globals.WEBROOT}/current
+
+        # Get current domain
+        DOMAIN=$(wp option get siteurl --allow-root | sed 's|https\?://||')
+
+        echo "Converting to multisite with domain: $DOMAIN"
+        echo "Mode: ${globals.MULTISITE_MODE}"
+
+        # Convert to multisite
+        if [ "${globals.MULTISITE_MODE}" == "subdom" ]; then
+          wp core multisite-convert --subdomains --allow-root
+        else
+          wp core multisite-convert --allow-root
+        fi
+
+        echo "Multisite conversion completed"
+      user: root
+
+  updateEnvFile:
+    - log: "Updating .env file with multisite constants"
+    - cmd[cp]: |-
+        cd ${globals.WEBROOT}/shared
+
+        echo "Adding multisite constants to .env..."
+
+        # Remove old multisite settings if present
+        sed -i '/^MULTISITE=/d' .env
+        sed -i '/^SUBDOMAIN_INSTALL=/d' .env
+        sed -i '/^DOMAIN_CURRENT_SITE=/d' .env
+        sed -i '/^PATH_CURRENT_SITE=/d' .env
+
+        # Get current domain
+        DOMAIN=$(wp option get siteurl --path=${globals.WEBROOT}/current --allow-root | sed 's|https\?://||')
+
+        # Add multisite settings
+        cat >> .env << MULTISITE
+
+        # Multisite
+        MULTISITE=true
+        SUBDOMAIN_INSTALL=$( [ "${globals.MULTISITE_MODE}" == "subdom" ] && echo "true" || echo "false" )
+        DOMAIN_CURRENT_SITE='$DOMAIN'
+        PATH_CURRENT_SITE='/'
+        MULTISITE
+
+        echo "Multisite constants added to .env"
+
+        # Verify .env
+        echo "Current .env multisite settings:"
+        grep -A 4 "# Multisite" .env
+      user: root
+
+success: |
+  **WordPress Multisite Enabled**
+
+  Your WordPress installation has been converted to a Multisite network.
+
+  Mode: ${globals.MULTISITE_MODE}
+
+  You can now:
+  - Add new sites from WordPress Admin → My Sites → Network Admin → Sites
+  - Manage network settings and users
+  - Install plugins network-wide or per-site
+
+  Note: For subdomain mode, ensure your DNS has a wildcard record pointing to this server.

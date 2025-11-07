@@ -290,8 +290,12 @@ actions:
       skipEmail: true
 
   installMultisite:
-    - install: ${globals.WP_CLUSTER_PATH}/addons/multisite.jps
-      skipEmail: true
+    - log: "Installing WordPress Multisite for Bedrock"
+    - install:
+        jps: /scripts/installMultisite.jps?_r=${fn.random}
+        skipEmail: true
+        settings:
+          mode: ${settings.mu_mode:subdir}
 
   setupBedrockNginx:
     - log: "Setting up Trellis Nginx configuration for Bedrock"
