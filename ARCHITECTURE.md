@@ -159,7 +159,7 @@ For users migrating from single-container to multi-node:
 
 1. **Connection Strings**: Database and Redis use network hostnames
 2. **PHP Configuration**: Applied to application node only
-3. **Database Access**: phpMyAdmin accessible on port 8443
+3. **Database Access**: Via network hostname from application node
 4. **Resource Allocation**: Distributed across three nodes
 5. **Backup Strategy**: Should cover all three nodes
 

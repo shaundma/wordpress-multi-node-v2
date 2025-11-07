@@ -37,8 +37,8 @@ The package deploys **three independent nodes** that work together:
 - **Features**:
   - Dedicated database resources
   - WordPress-optimized MySQL configuration
-  - phpMyAdmin access on port 8443
   - Automatic user and database creation
+  - Secure network-only access
 
 ### Node 3: Cache Server (Redis)
 - **Purpose**: Accelerates WordPress with object caching
@@ -162,9 +162,8 @@ The entire process takes **3-5 minutes**. You'll receive an email with access cr
 Once deployed, you'll receive:
 
 - **WordPress Admin URL**: `https://your-domain.com/wp-admin/`
-- **Database Access**: phpMyAdmin on port 8443
 - **Admin Credentials**: Sent via email
-- **Database Credentials**: For advanced configuration
+- **Database Credentials**: Username, password, and host sent via email
 
 ### What's Pre-Configured
 
