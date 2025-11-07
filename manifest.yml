@@ -128,10 +128,10 @@ onInstall:
       - if (${settings.wp-addon:true}): setupCDN
     - if (${settings.wp-addon:true}):
       - install:
-          skipEmail: true
-          jps:
-            - /scripts/events.jps?_r=${fn.random}
-            - ${globals.WP_CLUSTER_PATH}/scripts/addons.jps?_r=${fn.random}
+          - jps: /scripts/events.jps?_r=${fn.random}
+            skipEmail: true
+          - jps: ${globals.WP_CLUSTER_PATH}/scripts/addons.jps?_r=${fn.random}
+            skipEmail: true
     - if ('${settings.success_email}' != 'false'):
       - return:
           type: success
@@ -224,7 +224,7 @@ actions:
 
   setupLEdomain:
     - cmd[cp]: |-
-        cd /var/www/webroot/ROOT
+        cd /var/www/webroot/ROOT/current
 
         # Get the domain from Let's Encrypt settings
         source /opt/letsencrypt/settings
