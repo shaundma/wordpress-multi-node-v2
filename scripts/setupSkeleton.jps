@@ -60,84 +60,7 @@ actions:
     - log: "Creating placeholder index.php"
     - cmd[cp]: |-
         echo "Creating index.php in web directory..."
-
-        cat > ${globals.WEBROOT}/releases/1/web/index.php << 'INDEXEOF'
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Environment Ready</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #2c3e50;
-            border-bottom: 3px solid #3498db;
-            padding-bottom: 10px;
-        }
-        .info {
-            background: #e8f4f8;
-            padding: 15px;
-            border-left: 4px solid #3498db;
-            margin: 20px 0;
-        }
-        code {
-            background: #f4f4f4;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
-        }
-        .success {
-            color: #27ae60;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🚀 Environment Ready</h1>
-        <p class="success">Your Bedrock-compatible environment is ready for deployment!</p>
-
-        <div class="info">
-            <h3>📁 Directory Structure</h3>
-            <p>This environment follows the Bedrock directory structure:</p>
-            <ul>
-                <li><code>/var/www/webroot/ROOT/current</code> → Symlink to current release</li>
-                <li><code>/var/www/webroot/ROOT/releases/1</code> → Your application code goes here</li>
-                <li><code>/var/www/webroot/ROOT/shared</code> → Shared files across deployments</li>
-            </ul>
-        </div>
-
-        <div class="info">
-            <h3>🔐 Credentials</h3>
-            <p>Database and Redis credentials are stored in:</p>
-            <p><code>/var/www/webroot/ROOT/shared/.env</code></p>
-        </div>
-
-        <div class="info">
-            <h3>📝 Next Steps</h3>
-            <ol>
-                <li>Deploy your Bedrock WordPress application to <code>/var/www/webroot/ROOT/releases/1</code></li>
-                <li>Update the <code>.env</code> file with your WordPress salts</li>
-                <li>Your application will be served from <code>/var/www/webroot/ROOT/current/web</code></li>
-            </ol>
-        </div>
-    </div>
-</body>
-</html>
-INDEXEOF
+        echo '<html><body><h1>Environment Ready</h1><p>Your Bedrock-compatible environment is ready.</p><p>Credentials: /var/www/webroot/ROOT/shared/.env</p><p>Deploy to: /var/www/webroot/ROOT/releases/1</p></body></html>' > ${globals.WEBROOT}/releases/1/web/index.php
 
         # Verify index.php was created
         if [ -f ${globals.WEBROOT}/releases/1/web/index.php ]; then
@@ -156,31 +79,31 @@ INDEXEOF
         echo "Creating .env file in shared directory..."
 
         cat > ${globals.WEBROOT}/shared/.env << 'ENVEOF'
-# Database Configuration
-DB_NAME=wordpress
-DB_USER=${DB_USER_PLACEHOLDER}
-DB_PASSWORD=${DB_PASSWORD_PLACEHOLDER}
-DB_HOST=${DB_HOST_PLACEHOLDER}
-DB_PREFIX=wp_
+        # Database Configuration
+        DB_NAME=wordpress
+        DB_USER=${DB_USER_PLACEHOLDER}
+        DB_PASSWORD=${DB_PASSWORD_PLACEHOLDER}
+        DB_HOST=${DB_HOST_PLACEHOLDER}
+        DB_PREFIX=wp_
 
-# WordPress URLs (update these with your actual domain)
-WP_ENV=production
-WP_HOME=${WP_HOME_PLACEHOLDER}
-WP_SITEURL=${WP_SITEURL_PLACEHOLDER}
+        # WordPress URLs (update these with your actual domain)
+        WP_ENV=production
+        WP_HOME=${WP_HOME_PLACEHOLDER}
+        WP_SITEURL=${WP_SITEURL_PLACEHOLDER}
 
-# Redis Configuration
-REDIS_HOST=${REDIS_HOST_PLACEHOLDER}
-REDIS_PORT=${REDIS_PORT_PLACEHOLDER}
-REDIS_PASSWORD=${REDIS_PASSWORD_PLACEHOLDER}
-REDIS_SCHEME=tcp
-REDIS_DATABASE=0
-REDIS_TIMEOUT=1
-REDIS_READ_TIMEOUT=1
+        # Redis Configuration
+        REDIS_HOST=${REDIS_HOST_PLACEHOLDER}
+        REDIS_PORT=${REDIS_PORT_PLACEHOLDER}
+        REDIS_PASSWORD=${REDIS_PASSWORD_PLACEHOLDER}
+        REDIS_SCHEME=tcp
+        REDIS_DATABASE=0
+        REDIS_TIMEOUT=1
+        REDIS_READ_TIMEOUT=1
 
-# WordPress Salts
-# Generate your own security keys at: https://roots.io/salts.html
-# Add them here when deploying your WordPress application
-ENVEOF
+        # WordPress Salts
+        # Generate your own security keys at: https://roots.io/salts.html
+        # Add them here when deploying your WordPress application
+        ENVEOF
 
         # Remove leading/trailing whitespace
         sed -i 's/^[[:space:]]*//;s/[[:space:]]*$//' ${globals.WEBROOT}/shared/.env
