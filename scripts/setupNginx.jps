@@ -52,6 +52,10 @@ actions:
         chown nginx:nginx /var/cache/nginx/fastcgi
         echo "FastCGI cache zone configured"
 
+        # Create includes directory for user customization
+        mkdir -p /etc/nginx/conf.d/includes.d
+        echo "Created includes.d directory for user configuration files"
+
         # Restore good ssl.conf if Jelastic renamed it
         if [ -f /etc/nginx/conf.d/ssl.conf.disabled ]; then
           # Check if .disabled contains the real config (has sites-enabled include)
