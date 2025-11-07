@@ -128,8 +128,10 @@ onInstall:
       - if (${settings.wp-addon:true}): setupCDN
     - if (${settings.wp-addon:true}):
       - install:
-        - jps: /scripts/events.jps?_r=${fn.random}
-        - jps: ${globals.WP_CLUSTER_PATH}/scripts/addons.jps?_r=${fn.random}
+          skipEmail: true
+          jps:
+            - /scripts/events.jps?_r=${fn.random}
+            - ${globals.WP_CLUSTER_PATH}/scripts/addons.jps?_r=${fn.random}
     - if ('${settings.success_email}' != 'false'):
       - return:
           type: success
@@ -270,17 +272,21 @@ actions:
         CDN: ${env.envName}-${response.response.partnerCode}.cdn.jelastic.net
         SUCCESS: cdn
     - install: ${globals.WP_CLUSTER_PATH}/scripts/setupCDN.jps
-  
+      skipEmail: true
+
   installMultisite:
     - install: ${globals.WP_CLUSTER_PATH}/addons/multisite.jps
+      skipEmail: true
 
   setupBedrockNginx:
     - log: "Setting up Trellis Nginx configuration for Bedrock"
     - install: /scripts/setupNginx.jps?_r=${fn.random}
+      skipEmail: true
 
   installBedrock:
     - log: "Installing Bedrock WordPress"
     - install: /scripts/installBedrock.jps?_r=${fn.random}
+      skipEmail: true
       settings:
         db_host: ${globals.DB_HOST}
         db_user: ${globals.DB_USER}
@@ -297,6 +303,7 @@ actions:
   setupSkeletonStructure:
     - log: "Setting up skeleton directory structure for custom deployment"
     - install: /scripts/setupSkeleton.jps?_r=${fn.random}
+      skipEmail: true
       settings:
         db_user: ${globals.DB_USER}
         db_pass: ${globals.DB_PASS}
@@ -309,6 +316,7 @@ actions:
   setupNodes:
     - log: "Setup Application Node"
     - install: https://raw.githubusercontent.com/jelastic/templates/master/config_v2.jps?_r=${fn.random}
+      skipEmail: true
       settings:
         targetGroup: cp
         optimization: wordpress
