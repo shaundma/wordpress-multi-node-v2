@@ -482,8 +482,35 @@ actions:
     - log: "Installing WooCommerce for Bedrock"
     - cmd[${nodes.cp.master.id}]: |-
         cd /var/www/webroot/ROOT/current
+
+        echo "Installing WooCommerce ${globals.version_woocommerce}..."
         composer require wpackagist-plugin/woocommerce:${globals.version_woocommerce} &>> /var/log/run.log
+
+        if [ $? -eq 0 ]; then
+          echo "WooCommerce installed successfully"
+        else
+          echo "ERROR: WooCommerce installation failed"
+          exit 1
+        fi
+
+        echo "Activating WooCommerce plugin..."
         wp plugin activate woocommerce --allow-root &>> /var/log/run.log
+
+        if [ $? -eq 0 ]; then
+          echo "WooCommerce activated successfully"
+        else
+          echo "ERROR: WooCommerce activation failed"
+          exit 1
+        fi
+
+        # Fix permissions so WordPress can update the plugin later
+        echo "Setting proper permissions for plugin updates..."
+        chown -R nginx:nginx /var/www/webroot/ROOT
+        find /var/www/webroot/ROOT -type d -exec chmod 755 {} \;
+        find /var/www/webroot/ROOT -type f -exec chmod 644 {} \;
+        chmod 600 /var/www/webroot/ROOT/shared/.env
+
+        echo "WooCommerce installation complete!"
       user: root
 
 startPage: ${env.url}
