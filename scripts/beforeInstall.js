@@ -20,7 +20,9 @@ resp.nodes.push({
   skipNodeEmails: "true",
   displayName: "Application",
   env: {
-    SERVER_WEBROOT: "/var/www/webroot/ROOT"
+    SERVER_WEBROOT: "/var/www/webroot/ROOT",
+    JELASTIC_AUTOCONFIG: "true",
+    JELASTIC_EXPOSE: "false"
   }
 })
 
