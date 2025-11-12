@@ -111,16 +111,17 @@ onInstall:
     - setDomain
     - getRedisPassword
     - configureRedis
-    - setupBedrockNginx
     - if (${settings.wp-addon:true}):
       - createUserDB
       - installBedrock
+      - setupBedrockNginx
       - if (${settings.mu-addon:false}): installMultisite
       - if (${settings.woocommerce:false}): installWoocommerce
     - if (!${settings.wp-addon:true}):
       - setGlobals:
           SUCCESS: skeleton
       - setupSkeletonStructure
+      - setupBedrockNginx
     - if (${settings.le-addon:false}):
       - installLEaddon
       - if (${settings.wp-addon:true}): setupLEdomain
