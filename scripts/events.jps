@@ -70,35 +70,31 @@ onAfterSetCloudletCount [nodeGroup:nosqldb]:
 
       return {
         result: 0,
-        nodeId: redisNode.id,
-        maxMemoryMB: maxMemoryMB,
         onAfterReturn: {
-          call: "updateRedisMaxMemory"
+          setGlobals: {
+            REDIS_MAX_MEMORY_MB: maxMemoryMB
+          }
         }
       };
 
-  - updateRedisMaxMemory
+  - log: "Updating Redis maxmemory to ${globals.REDIS_MAX_MEMORY_MB}MB after scaling"
+  - cmd[nosqldb]: |-
+      # Get Redis password
+      REDIS_PASS=$(grep "^requirepass" /etc/redis.conf | awk '{print $2}' | tr -d '\n')
 
-actions:
-  updateRedisMaxMemory:
-    - log: "Updating Redis maxmemory to ${response.maxMemoryMB}MB after scaling"
-    - cmd[nosqldb]: |-
-        # Get Redis password
-        REDIS_PASS=$(grep "^requirepass" /etc/redis.conf | awk '{print $2}' | tr -d '\n')
+      if [ -z "$REDIS_PASS" ]; then
+        echo "ERROR: Could not find Redis password"
+        exit 1
+      fi
 
-        if [ -z "$REDIS_PASS" ]; then
-          echo "ERROR: Could not find Redis password"
-          exit 1
-        fi
+      # Update maxmemory
+      echo "Setting Redis maxmemory to ${globals.REDIS_MAX_MEMORY_MB}mb"
+      redis-cli -a "$REDIS_PASS" CONFIG SET maxmemory ${globals.REDIS_MAX_MEMORY_MB}mb
 
-        # Update maxmemory
-        echo "Setting Redis maxmemory to ${response.maxMemoryMB}mb"
-        redis-cli -a "$REDIS_PASS" CONFIG SET maxmemory ${response.maxMemoryMB}mb
+      # Persist to config file
+      redis-cli -a "$REDIS_PASS" CONFIG REWRITE
 
-        # Persist to config file
-        redis-cli -a "$REDIS_PASS" CONFIG REWRITE
-
-        # Verify the change
-        NEW_MAXMEM=$(redis-cli -a "$REDIS_PASS" CONFIG GET maxmemory | tail -1)
-        echo "Redis maxmemory updated successfully to: $NEW_MAXMEM bytes"
-      user: root         
+      # Verify the change
+      NEW_MAXMEM=$(redis-cli -a "$REDIS_PASS" CONFIG GET maxmemory | tail -1)
+      echo "Redis maxmemory updated successfully to: $NEW_MAXMEM bytes"
+    user: root         
