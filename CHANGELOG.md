@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2025-12-01
+
+### Fixed
+- **Critical Fix**: Moved scaling events back to events.jps (type: update) where they belong
+  - Events in install-type manifests (manifest.yml) don't persist as environment events
+  - Events in update-type manifests (events.jps) properly register as persistent environment events
+  - This is why the events weren't firing - they were in the wrong file type
+
+### Changed
+- Scaling events (onAfterScaleIn, onAfterScaleOut, onAfterSetCloudletCount) now correctly defined in events.jps
+- Removed non-functional events from manifest.yml
+- Events now properly trigger when Redis node is scaled
+
 ## [1.1.2] - 2025-12-01
 
 ### Added

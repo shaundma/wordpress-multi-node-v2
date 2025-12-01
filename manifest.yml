@@ -2,7 +2,7 @@ jpsType: install
 jpsVersion: '1.7.2'
 id: wordpress-multinode
 name: WordPress Multi-Node LEMP Stack
-version: 1.1.2
+version: 1.1.3
 versionDate: 2025-12-01
 categories:
   - apps/blogs
@@ -11,7 +11,7 @@ categories:
 logo: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/images/wp-standalone.png
 homepage: http://wordpress.org/
 description:
-  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.1.2 - Updated 2025-12-01
+  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.1.3 - Updated 2025-12-01
   short: WordPress Multi-Node LEMP Stack with separate Nginx+PHP, MariaDB, and Redis nodes
 
 baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
@@ -142,108 +142,7 @@ onInstall:
           message: /success/text/success-${globals.SUCCESS}.md?_r=${fn.random}
           email: /success/email/success-nginxphp-${globals.SUCCESS}.md?_r=${fn.random}
 
-onAfterScaleIn [nodeGroup:nosqldb]:
-  updateRedisMaxmemory
-
-onAfterScaleOut [nodeGroup:nosqldb]:
-  updateRedisMaxmemory
-
-onAfterSetCloudletCount [nodeGroup:nosqldb]:
-  updateRedisMaxmemory
-
 actions:
-
-  updateRedisMaxmemory:
-    - log: "=== Redis Scaling Event Triggered ==="
-    - script: |
-        // Get Redis node info
-        var resp = jelastic.environment.control.GetEnvInfo('${env.name}', session);
-        if (resp.result != 0) {
-          return {result: resp.result, error: "Failed to get env info: " + resp.error};
-        }
-
-        var nodes = resp.nodes;
-        var redisNode = null;
-
-        // Find the Redis node
-        for (var i = 0; i < nodes.length; i++) {
-          if (nodes[i].nodeGroup == 'nosqldb') {
-            redisNode = nodes[i];
-            break;
-          }
-        }
-
-        if (!redisNode) {
-          return {result: 1, error: "Redis node not found in environment"};
-        }
-
-        // Calculate maxmemory (80% of flexible cloudlets in MB)
-        // Each cloudlet = 128 MB RAM
-        var flexibleCloudlets = redisNode.flexibleCloudlets || 0;
-        var fixedCloudlets = redisNode.fixedCloudlets || 0;
-        var totalMB = flexibleCloudlets * 128;
-        var maxMemoryMB = Math.floor(totalMB * 0.8);
-
-        // Minimum 128MB, use fixed cloudlets if flexible is 0
-        if (maxMemoryMB < 128) {
-          totalMB = fixedCloudlets * 128;
-          maxMemoryMB = Math.floor(totalMB * 0.8);
-        }
-
-        // Log the calculation
-        jelastic.environment.control.ExecCmdById('${env.name}', session, redisNode.id,
-          toJSON([{
-            "command": "echo 'SCALING: Fixed=" + fixedCloudlets + " Flexible=" + flexibleCloudlets + " Total=" + totalMB + "MB MaxMemory=" + maxMemoryMB + "MB' >> /var/log/redis-scaling.log"
-          }]),
-          true
-        );
-
-        return {
-          result: 0,
-          onAfterReturn: {
-            setGlobals: {
-              REDIS_MAX_MEMORY_MB: maxMemoryMB,
-              REDIS_TOTAL_MB: totalMB
-            }
-          }
-        };
-
-    - log: "Redis node has ${globals.REDIS_TOTAL_MB}MB RAM. Setting maxmemory to ${globals.REDIS_MAX_MEMORY_MB}MB (80%)"
-    - cmd[nosqldb]: |-
-        echo "=== Starting Redis maxmemory update ===" >> /var/log/redis-scaling.log
-        date >> /var/log/redis-scaling.log
-
-        # Get current memory
-        free -m >> /var/log/redis-scaling.log
-
-        # Get Redis password
-        REDIS_PASS=$(grep "^requirepass" /etc/redis.conf | awk '{print $2}' | tr -d '\n')
-
-        if [ -z "$REDIS_PASS" ]; then
-          echo "ERROR: Could not find Redis password" >> /var/log/redis-scaling.log
-          exit 1
-        fi
-
-        # Get current maxmemory
-        CURRENT_MAXMEM=$(redis-cli -a "$REDIS_PASS" CONFIG GET maxmemory 2>&1 | tail -1)
-        echo "Current maxmemory: $CURRENT_MAXMEM bytes" >> /var/log/redis-scaling.log
-
-        # Update maxmemory
-        echo "Setting Redis maxmemory to ${globals.REDIS_MAX_MEMORY_MB}mb" >> /var/log/redis-scaling.log
-        redis-cli -a "$REDIS_PASS" CONFIG SET maxmemory ${globals.REDIS_MAX_MEMORY_MB}mb 2>&1 >> /var/log/redis-scaling.log
-
-        # Persist to config file
-        redis-cli -a "$REDIS_PASS" CONFIG REWRITE 2>&1 >> /var/log/redis-scaling.log
-
-        # Verify the change
-        NEW_MAXMEM=$(redis-cli -a "$REDIS_PASS" CONFIG GET maxmemory 2>&1 | tail -1)
-        echo "New maxmemory: $NEW_MAXMEM bytes (${globals.REDIS_MAX_MEMORY_MB}MB)" >> /var/log/redis-scaling.log
-        echo "=== Redis maxmemory update completed ===" >> /var/log/redis-scaling.log
-        echo "" >> /var/log/redis-scaling.log
-
-        # Also output to stdout for Jelastic logs
-        echo "Redis maxmemory updated: $CURRENT_MAXMEM -> $NEW_MAXMEM bytes (${globals.REDIS_MAX_MEMORY_MB}MB)"
-      user: root
 
   addLimits:
     - env.nodegroup.ApplyData[cp]:
