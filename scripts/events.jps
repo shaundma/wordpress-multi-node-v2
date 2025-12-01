@@ -29,7 +29,76 @@ onBeforeMigrate:
 
 onAfterMigrate:
   - cmd[${nodes.cp.master.id}]: if test -f ~/migrate; then cat ~/migrate; fi
-  - if (/${response.out}/.test(true)): 
+  - if (/${response.out}/.test(true)):
     - install: ${globals.WP_CLUSTER_PATH}/scripts/setupDomain.jps?_r=${fn.random}
       settings:
-        domain: ${env.domain}         
+        domain: ${env.domain}
+
+onAfterSetCloudletCount [nodeGroup:nosqldb]:
+  - script: |
+      // Get Redis node info
+      var resp = jelastic.environment.control.GetEnvInfo('${env.name}', session);
+      if (resp.result != 0) return resp;
+
+      var nodes = resp.nodes;
+      var redisNode = null;
+
+      // Find the Redis node
+      for (var i = 0; i < nodes.length; i++) {
+        if (nodes[i].nodeGroup == 'nosqldb') {
+          redisNode = nodes[i];
+          break;
+        }
+      }
+
+      if (!redisNode) {
+        return {result: 1, error: "Redis node not found"};
+      }
+
+      // Calculate maxmemory (80% of flexible cloudlets in MB)
+      // Each cloudlet = 128 MB RAM
+      var flexibleCloudlets = redisNode.flexibleCloudlets || 0;
+      var totalMB = flexibleCloudlets * 128;
+      var maxMemoryMB = Math.floor(totalMB * 0.8);
+
+      // Minimum 128MB, use fixed cloudlets if flexible is 0
+      if (maxMemoryMB < 128) {
+        var fixedCloudlets = redisNode.fixedCloudlets || 2;
+        totalMB = fixedCloudlets * 128;
+        maxMemoryMB = Math.floor(totalMB * 0.8);
+      }
+
+      return {
+        result: 0,
+        nodeId: redisNode.id,
+        maxMemoryMB: maxMemoryMB,
+        onAfterReturn: {
+          call: "updateRedisMaxMemory"
+        }
+      };
+
+  - updateRedisMaxMemory
+
+actions:
+  updateRedisMaxMemory:
+    - log: "Updating Redis maxmemory to ${response.maxMemoryMB}MB after scaling"
+    - cmd[nosqldb]: |-
+        # Get Redis password
+        REDIS_PASS=$(grep "^requirepass" /etc/redis.conf | awk '{print $2}' | tr -d '\n')
+
+        if [ -z "$REDIS_PASS" ]; then
+          echo "ERROR: Could not find Redis password"
+          exit 1
+        fi
+
+        # Update maxmemory
+        echo "Setting Redis maxmemory to ${response.maxMemoryMB}mb"
+        redis-cli -a "$REDIS_PASS" CONFIG SET maxmemory ${response.maxMemoryMB}mb
+
+        # Persist to config file
+        redis-cli -a "$REDIS_PASS" CONFIG REWRITE
+
+        # Verify the change
+        NEW_MAXMEM=$(redis-cli -a "$REDIS_PASS" CONFIG GET maxmemory | tail -1)
+        echo "Redis maxmemory updated successfully to: $NEW_MAXMEM bytes"
+      user: root         
