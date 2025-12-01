@@ -2,7 +2,7 @@ jpsType: install
 jpsVersion: '1.7.2'
 id: wordpress-multinode
 name: WordPress Multi-Node LEMP Stack
-version: 1.1.0
+version: 1.1.1
 versionDate: 2025-12-01
 categories:
   - apps/blogs
@@ -11,7 +11,7 @@ categories:
 logo: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/images/wp-standalone.png
 homepage: http://wordpress.org/
 description:
-  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.1.0 - Updated 2025-12-01
+  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.1.1 - Updated 2025-12-01
   short: WordPress Multi-Node LEMP Stack with separate Nginx+PHP, MariaDB, and Redis nodes
 
 baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
@@ -141,6 +141,71 @@ onInstall:
           type: success
           message: /success/text/success-${globals.SUCCESS}.md?_r=${fn.random}
           email: /success/email/success-nginxphp-${globals.SUCCESS}.md?_r=${fn.random}
+
+onAfterSetCloudletCount [nodeGroup:nosqldb]:
+  - script: |
+      // Get Redis node info
+      var resp = jelastic.environment.control.GetEnvInfo('${env.name}', session);
+      if (resp.result != 0) return resp;
+
+      var nodes = resp.nodes;
+      var redisNode = null;
+
+      // Find the Redis node
+      for (var i = 0; i < nodes.length; i++) {
+        if (nodes[i].nodeGroup == 'nosqldb') {
+          redisNode = nodes[i];
+          break;
+        }
+      }
+
+      if (!redisNode) {
+        return {result: 1, error: "Redis node not found"};
+      }
+
+      // Calculate maxmemory (80% of flexible cloudlets in MB)
+      // Each cloudlet = 128 MB RAM
+      var flexibleCloudlets = redisNode.flexibleCloudlets || 0;
+      var totalMB = flexibleCloudlets * 128;
+      var maxMemoryMB = Math.floor(totalMB * 0.8);
+
+      // Minimum 128MB, use fixed cloudlets if flexible is 0
+      if (maxMemoryMB < 128) {
+        var fixedCloudlets = redisNode.fixedCloudlets || 2;
+        totalMB = fixedCloudlets * 128;
+        maxMemoryMB = Math.floor(totalMB * 0.8);
+      }
+
+      return {
+        result: 0,
+        onAfterReturn: {
+          setGlobals: {
+            REDIS_MAX_MEMORY_MB: maxMemoryMB
+          }
+        }
+      };
+
+  - log: "Redis scaled - updating maxmemory to ${globals.REDIS_MAX_MEMORY_MB}MB"
+  - cmd[nosqldb]: |-
+      # Get Redis password
+      REDIS_PASS=$(grep "^requirepass" /etc/redis.conf | awk '{print $2}' | tr -d '\n')
+
+      if [ -z "$REDIS_PASS" ]; then
+        echo "ERROR: Could not find Redis password"
+        exit 1
+      fi
+
+      # Update maxmemory
+      echo "Setting Redis maxmemory to ${globals.REDIS_MAX_MEMORY_MB}mb"
+      redis-cli -a "$REDIS_PASS" CONFIG SET maxmemory ${globals.REDIS_MAX_MEMORY_MB}mb
+
+      # Persist to config file
+      redis-cli -a "$REDIS_PASS" CONFIG REWRITE
+
+      # Verify the change
+      NEW_MAXMEM=$(redis-cli -a "$REDIS_PASS" CONFIG GET maxmemory | tail -1)
+      echo "Redis maxmemory updated successfully to: $NEW_MAXMEM bytes (${globals.REDIS_MAX_MEMORY_MB}MB)"
+    user: root
 
 actions:
 

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-12-01
+
+### Fixed
+- **Redis Auto-Scaling Reliability**: Moved `onAfterSetCloudletCount` event from separate events.jps to main manifest.yml
+  - Event now registers at installation time for better persistence
+  - Fixes inconsistent triggering when Redis node is scaled
+  - Ensures maxmemory updates reliably on every scaling operation
+  - Removed duplicate event handler from events.jps
+
+### Changed
+- Improved logging for Redis scaling events
+
 ## [1.1.0] - 2025-12-01
 
 ### Added
