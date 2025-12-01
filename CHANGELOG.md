@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2025-12-01
+
+### Fixed
+- **WRONGPASS Error**: Fixed password extraction including quotes from redis.conf
+  - Password in redis.conf may be stored with quotes: `requirepass "password123"`
+  - Previous extraction captured quotes, causing 12-char password instead of 10-char
+  - AUTH failed with "WRONGPASS invalid username-password pair"
+  - Now strips both single and double quotes from extracted password
+  - Added final cleanup with xargs to trim any remaining whitespace
+
+### Changed
+- scripts/events.jps:109-131: Added quote stripping to all password extraction methods
+  - tr -d '"' removes double quotes
+  - tr -d "'" removes single quotes
+  - xargs trims whitespace
+- Enhanced error logging to show actual redis.conf line
+
 ## [1.2.2] - 2025-12-01
 
 ### Fixed

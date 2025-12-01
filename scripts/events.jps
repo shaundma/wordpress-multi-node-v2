@@ -106,25 +106,29 @@ actions:
         echo "Extracting Redis password..." >> /var/log/redis-scaling.log
 
         # Method 1: From redis.conf
-        REDIS_PASS=$(grep "^requirepass" /etc/redis.conf | awk '{print $2}' | tr -d '\n')
+        REDIS_PASS=$(grep "^requirepass" /etc/redis.conf | awk '{print $2}' | tr -d '\n' | tr -d '"' | tr -d "'")
 
         # Method 2: If empty, try with spaces
         if [ -z "$REDIS_PASS" ]; then
-          REDIS_PASS=$(grep "requirepass" /etc/redis.conf | grep -v "^#" | awk '{print $2}' | tr -d '\n')
+          REDIS_PASS=$(grep "requirepass" /etc/redis.conf | grep -v "^#" | awk '{print $2}' | tr -d '\n' | tr -d '"' | tr -d "'")
         fi
 
         # Method 3: Try Jelastic password file
         if [ -z "$REDIS_PASS" ]; then
           if [ -f /var/lib/jelastic/keys/password.txt ]; then
-            REDIS_PASS=$(cat /var/lib/jelastic/keys/password.txt | tr -d '\n')
+            REDIS_PASS=$(cat /var/lib/jelastic/keys/password.txt | tr -d '\n' | tr -d '"' | tr -d "'")
           fi
         fi
 
         if [ -z "$REDIS_PASS" ]; then
           echo "ERROR: Could not find Redis password" >> /var/log/redis-scaling.log
+          echo "Redis conf line:" >> /var/log/redis-scaling.log
           grep "requirepass" /etc/redis.conf >> /var/log/redis-scaling.log
           exit 1
         fi
+
+        # Strip any remaining quotes or whitespace
+        REDIS_PASS=$(echo "$REDIS_PASS" | tr -d '"' | tr -d "'" | xargs)
 
         echo "Password extracted successfully (length: ${#REDIS_PASS})" >> /var/log/redis-scaling.log
 
