@@ -2,7 +2,7 @@ jpsType: install
 jpsVersion: '1.7.2'
 id: wordpress-multinode
 name: WordPress Multi-Node LEMP Stack
-version: 1.2.0
+version: 1.2.1
 versionDate: 2025-12-01
 categories:
   - apps/blogs
@@ -11,7 +11,7 @@ categories:
 logo: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/images/wp-standalone.png
 homepage: http://wordpress.org/
 description:
-  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.0 - Updated 2025-12-01
+  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.1 - Updated 2025-12-01
   short: WordPress Multi-Node LEMP Stack with separate Nginx+PHP, MariaDB, and Redis nodes
 
 baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
@@ -448,7 +448,7 @@ actions:
       user: root
     - log: "Setup Redis Node"
     - cmd[nosqldb]: |-
-        echo "maxmemory 256mb" >> /etc/redis.conf
+        # Initial maxmemory will be set dynamically in configureRedis action
         echo "maxmemory-policy allkeys-lru" >> /etc/redis.conf
         systemctl restart redis
       user: root
@@ -540,10 +540,55 @@ actions:
         }
 
   configureRedis:
-    - log: Configure Redis for WordPress
+    - log: Configure Redis with dynamic maxmemory
+    - script: |
+        // Get Redis node info to calculate optimal maxmemory
+        var resp = jelastic.environment.control.GetEnvInfo('${env.name}', session);
+        if (resp.result != 0) return resp;
+
+        var nodes = resp.nodes;
+        var redisNode = null;
+
+        // Find the Redis node
+        for (var i = 0; i < nodes.length; i++) {
+          if (nodes[i].nodeGroup == 'nosqldb') {
+            redisNode = nodes[i];
+            break;
+          }
+        }
+
+        if (!redisNode) {
+          return {result: 1, error: "Redis node not found"};
+        }
+
+        // Calculate maxmemory (80% of allocated RAM)
+        // Each cloudlet = 128 MB RAM
+        var flexibleCloudlets = redisNode.flexibleCloudlets || 0;
+        var fixedCloudlets = redisNode.fixedCloudlets || 0;
+        var totalMB = flexibleCloudlets * 128;
+        var maxMemoryMB = Math.floor(totalMB * 0.8);
+
+        // Minimum 128MB, use fixed cloudlets if flexible is 0
+        if (maxMemoryMB < 128) {
+          totalMB = fixedCloudlets * 128;
+          maxMemoryMB = Math.floor(totalMB * 0.8);
+        }
+
+        return {
+          result: 0,
+          onAfterReturn: {
+            setGlobals: {
+              REDIS_INITIAL_MAXMEM_MB: maxMemoryMB
+            }
+          }
+        };
+
+    - log: "Setting Redis maxmemory to ${globals.REDIS_INITIAL_MAXMEM_MB}MB (80% of ${globals.REDIS_INITIAL_MAXMEM_MB * 1.25}MB total RAM)"
     - cmd[nosqldb]: |-
-        redis-cli -a ${globals.REDIS_PASS} CONFIG SET maxmemory 256mb
+        redis-cli -a ${globals.REDIS_PASS} CONFIG SET maxmemory ${globals.REDIS_INITIAL_MAXMEM_MB}mb
         redis-cli -a ${globals.REDIS_PASS} CONFIG SET maxmemory-policy allkeys-lru
+        redis-cli -a ${globals.REDIS_PASS} CONFIG REWRITE
+        echo "Initial Redis maxmemory set to ${globals.REDIS_INITIAL_MAXMEM_MB}MB"
       user: root
       
   installWoocommerce:

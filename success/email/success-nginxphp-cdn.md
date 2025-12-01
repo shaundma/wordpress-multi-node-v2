@@ -11,6 +11,11 @@ Use the following credentials to access the admin panel:
 **Password**: ${globals.DB_PASS}
 **Host**: ${globals.DB_HOST}
 
+**Redis Cache**:
+**Host**: ${globals.REDIS_HOST}
+**Port**: ${globals.REDIS_PORT}
+**Password**: ${globals.REDIS_PASS}
+
 **Architecture**: Multi-node LEMP stack (Nginx + PHP-FPM, MariaDB, Redis)
 
 **CDN**: [${globals.CDN_URL}](${globals.CDN_URL})
