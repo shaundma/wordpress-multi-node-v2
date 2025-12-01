@@ -102,27 +102,47 @@ actions:
         # Get current memory
         free -m >> /var/log/redis-scaling.log
 
-        # Get Redis password
+        # Get Redis password - try multiple methods
+        echo "Extracting Redis password..." >> /var/log/redis-scaling.log
+
+        # Method 1: From redis.conf
         REDIS_PASS=$(grep "^requirepass" /etc/redis.conf | awk '{print $2}' | tr -d '\n')
+
+        # Method 2: If empty, try with spaces
+        if [ -z "$REDIS_PASS" ]; then
+          REDIS_PASS=$(grep "requirepass" /etc/redis.conf | grep -v "^#" | awk '{print $2}' | tr -d '\n')
+        fi
+
+        # Method 3: Try Jelastic password file
+        if [ -z "$REDIS_PASS" ]; then
+          if [ -f /var/lib/jelastic/keys/password.txt ]; then
+            REDIS_PASS=$(cat /var/lib/jelastic/keys/password.txt | tr -d '\n')
+          fi
+        fi
 
         if [ -z "$REDIS_PASS" ]; then
           echo "ERROR: Could not find Redis password" >> /var/log/redis-scaling.log
+          grep "requirepass" /etc/redis.conf >> /var/log/redis-scaling.log
           exit 1
         fi
 
+        echo "Password extracted successfully (length: ${#REDIS_PASS})" >> /var/log/redis-scaling.log
+
         # Get current maxmemory
-        CURRENT_MAXMEM=$(redis-cli -a "$REDIS_PASS" CONFIG GET maxmemory 2>&1 | tail -1)
+        CURRENT_MAXMEM=$(redis-cli -a "$REDIS_PASS" CONFIG GET maxmemory 2>&1 | grep -v "Warning" | tail -1)
         echo "Current maxmemory: $CURRENT_MAXMEM bytes" >> /var/log/redis-scaling.log
 
         # Update maxmemory
         echo "Setting Redis maxmemory to ${globals.REDIS_MAX_MEMORY_MB}mb" >> /var/log/redis-scaling.log
-        redis-cli -a "$REDIS_PASS" CONFIG SET maxmemory ${globals.REDIS_MAX_MEMORY_MB}mb 2>&1 >> /var/log/redis-scaling.log
+        RESULT=$(redis-cli -a "$REDIS_PASS" CONFIG SET maxmemory ${globals.REDIS_MAX_MEMORY_MB}mb 2>&1 | grep -v "Warning")
+        echo "CONFIG SET result: $RESULT" >> /var/log/redis-scaling.log
 
         # Persist to config file
-        redis-cli -a "$REDIS_PASS" CONFIG REWRITE 2>&1 >> /var/log/redis-scaling.log
+        REWRITE_RESULT=$(redis-cli -a "$REDIS_PASS" CONFIG REWRITE 2>&1 | grep -v "Warning")
+        echo "CONFIG REWRITE result: $REWRITE_RESULT" >> /var/log/redis-scaling.log
 
         # Verify the change
-        NEW_MAXMEM=$(redis-cli -a "$REDIS_PASS" CONFIG GET maxmemory 2>&1 | tail -1)
+        NEW_MAXMEM=$(redis-cli -a "$REDIS_PASS" CONFIG GET maxmemory 2>&1 | grep -v "Warning" | tail -1)
         echo "New maxmemory: $NEW_MAXMEM bytes (${globals.REDIS_MAX_MEMORY_MB}MB)" >> /var/log/redis-scaling.log
         echo "=== Redis maxmemory update completed ===" >> /var/log/redis-scaling.log
         echo "" >> /var/log/redis-scaling.log
