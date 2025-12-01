@@ -4,6 +4,8 @@
 
 # WordPress Multi-Node LEMP Stack with Bedrock
 
+**Version 1.1.0** | Last Updated: December 1, 2025
+
 An automated WordPress deployment package for **Virtuozzo Application Platform** that creates a high-performance, scalable WordPress environment using **Roots.io Bedrock** and **Trellis** architecture across multiple nodes.
 
 ## What This Package Does
@@ -44,7 +46,9 @@ The package deploys **three independent nodes** that work together:
 - **Purpose**: Accelerates WordPress with object caching
 - **Technology**: Redis 7.2.4
 - **Features**:
-  - 256MB memory allocation with LRU eviction
+  - Automatic memory scaling (80% of node RAM)
+  - Dynamic maxmemory adjustment when node is scaled
+  - LRU eviction policy for optimal cache performance
   - Pre-configured for WordPress object caching
   - Network-accessible from application node
 
@@ -136,7 +140,7 @@ The package automatically performs these steps:
 
 3. **Configure Services**
    - Optimizes MySQL for WordPress workloads
-   - Configures Redis with 256MB cache and LRU eviction
+   - Configures Redis with automatic memory scaling and LRU eviction
    - Sets up PHP-FPM with WordPress-specific settings
    - Creates database and user with proper permissions
    - Applies Trellis Nginx configuration for Bedrock
@@ -221,12 +225,23 @@ This package implements [Roots.io Bedrock](https://github.com/roots/bedrock) and
 
 After deployment, you can:
 
-- Scale individual nodes (more CPU/RAM/disk)
-- Change PHP version on application node
-- Add more application nodes for load balancing
-- Configure Redis memory limits
-- Tune MySQL performance settings
-- Install additional WordPress plugins
+- **Scale individual nodes** (more CPU/RAM/disk)
+  - Redis cache automatically adjusts maxmemory when scaled (80% of available RAM)
+  - Instant scaling without manual configuration
+- **Change PHP version** on application node
+- **Add more application nodes** for load balancing
+- **Tune MySQL** performance settings
+- **Install additional WordPress plugins** via Composer or WP-CLI
+
+### Automatic Redis Scaling
+
+When you scale the Redis node (increase or decrease cloudlets), the system automatically:
+1. Detects the scaling event
+2. Calculates optimal maxmemory (80% of new RAM allocation)
+3. Updates Redis configuration immediately
+4. Persists the change to redis.conf
+
+**Example**: Scale Redis from 2 cloudlets (256 MB) to 4 cloudlets (512 MB), and maxmemory automatically updates from 204 MB to 409 MB.
 
 See `ARCHITECTURE.md` for detailed technical documentation.
 
