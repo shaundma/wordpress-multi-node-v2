@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2025-12-01
+
+### Added
+- **Multiple Scaling Event Triggers**: Now responds to three different scaling events for maximum reliability
+  - `onAfterScaleIn`: Triggers when scaling down (reducing cloudlets)
+  - `onAfterScaleOut`: Triggers when scaling up (increasing cloudlets)
+  - `onAfterSetCloudletCount`: Triggers on any cloudlet count change
+- **Comprehensive Logging**: Added detailed logging to `/var/log/redis-scaling.log` on Redis node
+  - Logs cloudlet counts, memory calculations, and maxmemory changes
+  - Helps diagnose scaling behavior and verify proper operation
+- **Enhanced Error Reporting**: Better error messages in Jelastic action logs
+
+### Changed
+- Refactored scaling logic into reusable `updateRedisMaxmemory` action
+- Improved calculation logging with fixed/flexible cloudlet breakdown
+
 ## [1.1.1] - 2025-12-01
 
 ### Fixed
