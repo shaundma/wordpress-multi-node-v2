@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2025-12-01
+
+### Fixed
+- **Permission Error Fix**: Removed ExecCmdById logging that was running without root permissions
+  - The logging attempt was failing with "Permission denied" on /var/log/redis-scaling.log
+  - This caused the entire scaling action to fail before redis-cli commands could execute
+  - Now all logging happens in the cmd[nosqldb] block which runs as root
+  - Maxmemory updates will now execute successfully
+
+### Changed
+- Added cloudlet counts (fixed/flexible) to global variables for better logging
+- Enhanced log messages to show cloudlet allocation details
+
 ## [1.1.3] - 2025-12-01
 
 ### Fixed

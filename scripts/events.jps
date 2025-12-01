@@ -81,28 +81,23 @@ actions:
           maxMemoryMB = Math.floor(totalMB * 0.8);
         }
 
-        // Log the calculation
-        jelastic.environment.control.ExecCmdById('${env.name}', session, redisNode.id,
-          toJSON([{
-            "command": "echo 'SCALING: Fixed=" + fixedCloudlets + " Flexible=" + flexibleCloudlets + " Total=" + totalMB + "MB MaxMemory=" + maxMemoryMB + "MB' >> /var/log/redis-scaling.log"
-          }]),
-          true
-        );
-
         return {
           result: 0,
           onAfterReturn: {
             setGlobals: {
               REDIS_MAX_MEMORY_MB: maxMemoryMB,
-              REDIS_TOTAL_MB: totalMB
+              REDIS_TOTAL_MB: totalMB,
+              REDIS_FIXED_CLOUDLETS: fixedCloudlets,
+              REDIS_FLEXIBLE_CLOUDLETS: flexibleCloudlets
             }
           }
         };
 
-    - log: "Redis node has ${globals.REDIS_TOTAL_MB}MB RAM. Setting maxmemory to ${globals.REDIS_MAX_MEMORY_MB}MB (80%)"
+    - log: "Redis scaled: Fixed=${globals.REDIS_FIXED_CLOUDLETS} Flexible=${globals.REDIS_FLEXIBLE_CLOUDLETS} cloudlets. Total=${globals.REDIS_TOTAL_MB}MB. Setting maxmemory to ${globals.REDIS_MAX_MEMORY_MB}MB (80%)"
     - cmd[nosqldb]: |-
         echo "=== Starting Redis maxmemory update ===" >> /var/log/redis-scaling.log
         date >> /var/log/redis-scaling.log
+        echo "SCALING: Fixed=${globals.REDIS_FIXED_CLOUDLETS} Flexible=${globals.REDIS_FLEXIBLE_CLOUDLETS} Total=${globals.REDIS_TOTAL_MB}MB MaxMemory=${globals.REDIS_MAX_MEMORY_MB}MB" >> /var/log/redis-scaling.log
 
         # Get current memory
         free -m >> /var/log/redis-scaling.log
