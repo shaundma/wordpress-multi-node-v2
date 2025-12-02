@@ -2,7 +2,7 @@ jpsType: install
 jpsVersion: '1.7.2'
 id: wordpress-multinode
 name: WordPress Multi-Node LEMP Stack
-version: 1.2.5
+version: 1.2.6
 versionDate: 2025-12-02
 categories:
   - apps/blogs
@@ -11,7 +11,7 @@ categories:
 logo: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/images/wp-standalone.png
 homepage: http://wordpress.org/
 description:
-  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.5 - Updated 2025-12-02
+  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.6 - Updated 2025-12-02
   short: WordPress Multi-Node LEMP Stack with separate Nginx+PHP, MariaDB, and Redis nodes
 
 baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
@@ -214,14 +214,22 @@ actions:
         DOMAIN: ${response.domains} 
 
   installLEaddon:
-    - install: https://raw.githubusercontent.com/jelastic-jps/lets-encrypt/master/manifest.jps?_r=${fn.random}
-      nodeGroup: cp
-      skipEmail: true
-      settings:
-        test: false
-        skipEmail: true
-        fallbackToX1: true
-        withExtIp: ${globals.isExtIP}
+    - script: |
+        return {
+          result: 0,
+          onAfterReturn: {
+            install: {
+              jps: "https://github.com/jelastic-jps/lets-encrypt/blob/master/manifest.jps?_r=${fn.random}",
+              nodeGroup: "cp",
+              skipEmail: true,
+              settings: {
+                test: false,
+                fallbackToX1: true,
+                withExtIp: "${globals.isExtIP}"
+              }
+            }
+          }
+        };
 
   initLEsettings:
     - script: |

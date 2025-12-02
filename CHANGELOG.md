@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.6] - 2025-12-02
+
+### Fixed
+- **CRITICAL: Let's Encrypt Permission Error for Collaboration Users**: Fixed installation failure with collaboration users
+  - Error: "permission denied (access not allowed)" when createScript is called during addon installation
+  - The installLEaddon action was using direct `install:` which runs in manifest context without elevated permissions
+  - Changed to use `onAfterReturn: { install: {} }` pattern following wordpress-cluster best practice
+  - This defers addon installation until after the script completes, allowing proper permission handling
+  - Collaboration users with full environment permissions can now install with Let's Encrypt enabled
+  - Also reverted GitHub URL back to blob format (both work; blob is the standard used by wordpress-cluster)
+
+### Changed
+- manifest.yml:216-232: Refactored installLEaddon to use onAfterReturn pattern
+  - Wraps addon installation in script block that returns onAfterReturn object
+  - Platform handles addon installation with proper permissions after script execution
+  - Matches pattern used by official jelastic-jps/wordpress-cluster package
+
 ## [1.2.5] - 2025-12-02
 
 ### Fixed
