@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.8] - 2025-12-02
+
+### Fixed
+- **CRITICAL: Prominent Warning for Collaboration Users**: Added highly visible warning since automatic detection proved unreliable
+  - Collaboration user detection via API checks did not work reliably across different platform configurations
+  - Switched to manual approach: prominent red warning message visible to all users
+  - Added displayfield with bold red warning text above Let's Encrypt checkbox
+  - Changed Let's Encrypt default from checked to unchecked (safer default)
+  - Warning clearly explains that collaboration users will get "permission denied" errors if they enable SSL during installation
+  - Instructs collaboration users to add Let's Encrypt after deployment via marketplace
+
+### Changed
+- manifest.yml: Added le-warning displayfield with prominent HTML-formatted warning
+- manifest.yml: Changed le-addon default value from true to false (unchecked by default)
+- Installation form now shows clear red warning: "⚠️ COLLABORATION USERS: do NOT check Install Let's Encrypt SSL"
+- Account owners can still enable it, but must consciously check the box
+
+### Rationale
+After testing multiple API-based detection methods (GetTasks, GetQuotas, GetUserInfo, GetAccount), none reliably identified collaboration users across different platform configurations. The manual warning approach is more reliable and prevents installation failures.
+
 ## [1.2.7] - 2025-12-02
 
 ### Fixed

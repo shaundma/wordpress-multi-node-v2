@@ -2,7 +2,7 @@ jpsType: install
 jpsVersion: '1.7.2'
 id: wordpress-multinode
 name: WordPress Multi-Node LEMP Stack
-version: 1.2.7
+version: 1.2.8
 versionDate: 2025-12-02
 categories:
   - apps/blogs
@@ -11,7 +11,7 @@ categories:
 logo: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/images/wp-standalone.png
 homepage: http://wordpress.org/
 description:
-  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.7 - Updated 2025-12-02
+  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.8 - Updated 2025-12-02
   short: WordPress Multi-Node LEMP Stack with separate Nginx+PHP, MariaDB, and Redis nodes
 
 baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
@@ -64,10 +64,16 @@ settings:
       disabled: false
       tooltip: "⚠️ Requires 'Install WordPress' to be enabled. Multisite is a type of WordPress installation that allows you to create and manage a network of multiple websites from a single WordPress dashboard."
 
+    - type: displayfield
+      name: le-warning
+      markup: |
+        <p style="color: #d9534f; font-weight: bold; margin: 8px 0;">⚠️ COLLABORATION USERS:</p>
+        <p style="margin: 0 0 8px 0;">If you are a collaboration user (not the account owner), do NOT check "Install Let's Encrypt SSL" below. Collaboration users lack permissions to create scheduled scripts, which will cause installation to fail. Instead, install Let's Encrypt after deployment through the marketplace addons.</p>
+
     - caption: Install Let's Encrypt SSL with Auto-Renewal
       type: checkbox
       name: le-addon
-      value: true
+      value: false
       disabled: false
       tooltip: "Advanced integration with Let's Encrypt certificate authority that simplifies and automates the process of issuing, configuring and updating trusted custom SSL certificates."
 
