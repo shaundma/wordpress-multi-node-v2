@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.7] - 2025-12-02
+
+### Fixed
+- **CRITICAL: Automatic Detection of Collaboration Users**: Now automatically detects and disables Let's Encrypt for collaboration users
+  - Collaboration users cannot create scheduled scripts due to platform API restrictions
+  - This caused "permission denied (access not allowed)" errors during Let's Encrypt installation
+  - Added automatic detection in beforeInit.js using jelastic.utils.scheduler.GetTasks() API check
+  - Let's Encrypt checkbox is now automatically disabled for collaboration users
+  - Clear tooltip message explains the limitation and instructs users to add SSL after deployment
+  - Account owners can still install with Let's Encrypt enabled during initial deployment
+
+### Added
+- Collaboration user detection logic in scripts/beforeInit.js
+  - Checks utils.Scheduler API access to determine if user has script creation permissions
+  - Handles multiple permission denied error codes (701, 702, 8, Response.PERMISSION_DENIED)
+  - Falls back to assuming collaboration user if API check fails for safety
+  - Dynamically updates Let's Encrypt checkbox: disabled + unchecked + explanatory tooltip
+
+### Changed
+- scripts/beforeInit.js: Added isCollaborationUser detection and conditional checkbox disabling
+- Improved user experience by preventing installation failures before they occur
+
 ## [1.2.6] - 2025-12-02
 
 ### Fixed

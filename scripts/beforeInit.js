@@ -20,6 +20,32 @@ if (isCDN.result == 0 || isCDN.result == Response.PERMISSION_DENIED) {
   fields["cdn-addon"].value = false;
 }
 
+// Detect if user is a collaboration user by checking script creation permissions
+// Collaboration users cannot create scheduled scripts, so we check utils.Scheduler access
+var isCollaborationUser = false;
+try {
+  // Try to list scheduled tasks - only account owners can do this
+  var tasksCheck = jelastic.utils.scheduler.GetTasks({});
+  // If we get PERMISSION_DENIED or ACCESS_DENIED, user is a collaborator
+  if (tasksCheck.result == Response.PERMISSION_DENIED ||
+      tasksCheck.result == Response.ACCESS_DENIED ||
+      tasksCheck.result == 701 || // Permission denied error code
+      tasksCheck.result == 702 || // Access denied error code
+      tasksCheck.result == 8) {    // Another permission denied code
+    isCollaborationUser = true;
+  }
+} catch (e) {
+  // If the API call fails entirely, assume collaboration user for safety
+  isCollaborationUser = true;
+}
+
+// Disable Let's Encrypt for collaboration users
+if (isCollaborationUser) {
+  fields["le-addon"].disabled = true;
+  fields["le-addon"].value = false;
+  fields["le-addon"].tooltip = "⚠️ Collaboration users cannot install Let's Encrypt during initial deployment due to platform script creation restrictions. Please install Let's Encrypt after deployment using the marketplace addons feature.";
+}
+
 return {
     result: 0,
     settings: settings
