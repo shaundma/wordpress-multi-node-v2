@@ -7,8 +7,47 @@ globals:
       
 onAfterInstallAddon [nodeGroup:cp, id:letsencrypt-ssl-addon]:
   - cmd[cp]: |-
-      source /opt/letsencrypt/settings;
-      bash ~/bin/setupWP.sh --url https://${domain};
+      cd /var/www/webroot/ROOT/current
+
+      # Get the domain from Let's Encrypt settings
+      source /opt/letsencrypt/settings
+
+      # Check if WordPress is installed
+      if ! wp core is-installed --allow-root; then
+        echo "WordPress not installed, skipping URL update"
+        exit 0
+      fi
+
+      # Check if multisite - skip search-replace for multisite
+      if ! wp core is-installed --network --allow-root; then
+        # Get current URLs
+        OLD_URL=$(wp option get home --allow-root)
+        OLD_DOMAIN=$(echo $OLD_URL | cut -d'/' -f3)
+        NEW_URL="https://${domain}"
+        NEW_DOMAIN="${domain}"
+
+        echo "Updating WordPress URLs from $OLD_URL to $NEW_URL"
+
+        # Search and replace old URLs with new HTTPS URLs throughout database
+        wp search-replace "$OLD_URL" "$NEW_URL" --skip-columns=guid --all-tables --allow-root
+
+        # Also replace short domain (for protocol-relative URLs)
+        wp search-replace "$OLD_DOMAIN" "$NEW_DOMAIN" --skip-columns=guid --all-tables --allow-root
+
+        # Update .env file
+        sed -i "s|WP_HOME=http://|WP_HOME=https://|g" .env
+        sed -i "s|WP_SITEURL=http://|WP_SITEURL=https://|g" .env
+
+        # Flush caches
+        wp cache flush --allow-root || true
+        wp redis enable --allow-root || true
+
+        echo "WordPress URLs updated to HTTPS successfully"
+      else
+        echo "Multisite detected - skipping automatic URL update"
+        echo "Please update multisite URLs manually if needed"
+      fi
+    user: root
 
 onAfterClone: 
   - install: ${globals.WP_CLUSTER_PATH}/scripts/setupDomain.jps?_r=${fn.random}

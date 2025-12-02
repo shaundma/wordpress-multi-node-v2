@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2025-12-02
+
+### Fixed
+- **CRITICAL: Missing setupWP.sh Script**: Fixed installation failure when Let's Encrypt SSL addon is installed
+  - Error: "bash: /var/lib/nginx/bin/setupWP.sh: No such file or directory" (exit status 127)
+  - The onAfterInstallAddon event handler referenced non-existent setupWP.sh script
+  - Replaced script call with inline WP-CLI commands for URL updates
+  - Now properly updates WordPress URLs to HTTPS after SSL installation
+  - Added WordPress installation check before attempting URL updates
+  - Added multisite detection with appropriate handling
+
+### Changed
+- scripts/events.jps:8-50: Replaced `bash ~/bin/setupWP.sh` with complete inline URL update logic
+  - Uses WP-CLI for database search-replace operations
+  - Updates .env file to use HTTPS protocol
+  - Flushes caches and re-enables Redis after URL changes
+  - Provides clear status messages for each operation
+
 ## [1.2.3] - 2025-12-01
 
 ### Fixed
