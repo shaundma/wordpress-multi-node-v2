@@ -64,11 +64,11 @@ settings:
       disabled: false
       tooltip: "⚠️ Requires 'Install WordPress' to be enabled. Multisite is a type of WordPress installation that allows you to create and manage a network of multiple websites from a single WordPress dashboard."
 
-    - caption: ⚠️ COLLABORATION USERS - Read Before Checking SSL Below
+    - caption: ⚠️ COLLABORATION
       type: displayfield
       name: le-warning
       hideLabel: false
-      markup: If you are a collaboration user (not account owner), do NOT enable Let's Encrypt below - it will fail. Add SSL after deployment via marketplace instead.
+      markup: Do NOT enable Let's Encrypt below - it will fail, add SSL add-on manually
 
     - caption: Install Let's Encrypt SSL with Auto-Renewal
       type: checkbox
