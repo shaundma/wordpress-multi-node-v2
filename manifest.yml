@@ -66,9 +66,7 @@ settings:
 
     - type: displayfield
       name: le-warning
-      markup: |
-        <p style="color: #d9534f; font-weight: bold; margin: 8px 0;">⚠️ COLLABORATION USERS:</p>
-        <p style="margin: 0 0 8px 0;">If you are a collaboration user (not the account owner), do NOT check "Install Let's Encrypt SSL" below. Collaboration users lack permissions to create scheduled scripts, which will cause installation to fail. Instead, install Let's Encrypt after deployment through the marketplace addons.</p>
+      markup: <font color='red' size='3'><b>⚠️ COLLABORATION USERS:</b></font><br/>If you are a collaboration user (not the account owner), do <b>NOT</b> check "Install Let's Encrypt SSL" below. Collaboration users lack permissions to create scheduled scripts, which will cause installation to fail. Instead, install Let's Encrypt after deployment through the marketplace addons.
 
     - caption: Install Let's Encrypt SSL with Auto-Renewal
       type: checkbox
