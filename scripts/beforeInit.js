@@ -20,26 +20,45 @@ if (isCDN.result == 0 || isCDN.result == Response.PERMISSION_DENIED) {
   fields["cdn-addon"].value = false;
 }
 
-// Detect if user is a collaboration user by checking script creation permissions
-// Collaboration users cannot create scheduled scripts, so we check utils.Scheduler access
+// Detect if user is a collaboration user
+// Collaboration users lack permissions to create scheduled scripts
 var isCollaborationUser = false;
+
 try {
-  // Try to list scheduled tasks - only account owners can do this
-  var tasksCheck = jelastic.utils.scheduler.GetTasks({});
-  // If we get PERMISSION_DENIED or ACCESS_DENIED, user is a collaborator
-  if (tasksCheck.result == Response.PERMISSION_DENIED ||
-      tasksCheck.result == Response.ACCESS_DENIED ||
-      tasksCheck.result == 701 || // Permission denied error code
-      tasksCheck.result == 702 || // Access denied error code
-      tasksCheck.result == 8) {    // Another permission denied code
+  // Test if user has permission to create environment scripts
+  // Try to check account quotas - collaboration users may have restricted access
+  var quotaCheck = jelastic.billing.account.GetQuotas('environment.maxcount');
+
+  // Also try to get account info which might be restricted
+  var accountCheck = jelastic.users.account.GetUserInfo();
+
+  // Check if either call indicates collaboration/permission issues
+  if (quotaCheck.result == 702 || quotaCheck.result == 701 || quotaCheck.result == 8 ||
+      quotaCheck.result == Response.PERMISSION_DENIED || quotaCheck.result == Response.ACCESS_DENIED ||
+      accountCheck.result == 702 || accountCheck.result == 701 || accountCheck.result == 8 ||
+      accountCheck.result == Response.PERMISSION_DENIED || accountCheck.result == Response.ACCESS_DENIED) {
     isCollaborationUser = true;
   }
+
+  // Additional check: try to access account settings which owners can but collaborators might not
+  if (!isCollaborationUser) {
+    var settingsCheck = jelastic.billing.account.GetAccount();
+    if (settingsCheck.result != 0 && settingsCheck.result != Response.OBJECT_NOT_EXIST) {
+      isCollaborationUser = true;
+    }
+  }
 } catch (e) {
-  // If the API call fails entirely, assume collaboration user for safety
-  isCollaborationUser = true;
+  // If any API call fails with permission error, assume collaboration user
+  if (e.message && (e.message.indexOf("permission") > -1 || e.message.indexOf("access") > -1)) {
+    isCollaborationUser = true;
+  }
 }
 
-// Disable Let's Encrypt for collaboration users
+// Update Let's Encrypt tooltip for ALL users with collaboration warning
+var originalTooltip = fields["le-addon"].tooltip || "Advanced integration with Let's Encrypt certificate authority that simplifies and automates the process of issuing, configuring and updating trusted custom SSL certificates.";
+fields["le-addon"].tooltip = originalTooltip + "\n\n⚠️ Note for Collaboration Users: If you are a collaboration user, you must uncheck this option and add Let's Encrypt after deployment through the marketplace addons feature due to platform script creation restrictions.";
+
+// If detected as collaboration user, disable the checkbox
 if (isCollaborationUser) {
   fields["le-addon"].disabled = true;
   fields["le-addon"].value = false;
