@@ -2,8 +2,8 @@ jpsType: install
 jpsVersion: '1.7.2'
 id: wordpress-multinode
 name: WordPress Multi-Node LEMP Stack
-version: 1.2.8
-versionDate: 2025-12-02
+version: 1.2.9
+versionDate: 2025-12-04
 categories:
   - apps/blogs
   - apps/content-management
@@ -11,7 +11,7 @@ categories:
 logo: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/images/wp-standalone.png
 homepage: http://wordpress.org/
 description:
-  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.8 - Updated 2025-12-02
+  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.9 - Updated 2025-12-04
   short: WordPress Multi-Node LEMP Stack with separate Nginx+PHP, MariaDB, and Redis nodes
 
 baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
@@ -451,9 +451,33 @@ actions:
           exit 1
         fi
 
+        # Deploy PHP configuration files to /etc/php.d/
+        echo "Deploying custom PHP configuration files..."
+
+        # Create /etc/php.d if it doesn't exist
+        mkdir -p /etc/php.d
+
+        # Download opcache.ini configuration
+        wget -O /etc/php.d/opcache.ini ${baseUrl}/configs/php.d/opcache.ini
+        if [ -f /etc/php.d/opcache.ini ]; then
+          echo "OPcache configuration deployed to /etc/php.d/opcache.ini"
+        else
+          echo "ERROR: Failed to download opcache.ini"
+          exit 1
+        fi
+
+        # Download wordpress.ini configuration
+        wget -O /etc/php.d/wordpress.ini ${baseUrl}/configs/php.d/wordpress.ini
+        if [ -f /etc/php.d/wordpress.ini ]; then
+          echo "WordPress PHP configuration deployed to /etc/php.d/wordpress.ini"
+        else
+          echo "ERROR: Failed to download wordpress.ini"
+          exit 1
+        fi
+
         # Restart PHP-FPM to apply changes
         systemctl restart php-fpm
-        echo "PHP-FPM restarted with Redis, igbinary, intl, gd, imagick, and OPcache"
+        echo "PHP-FPM restarted with Redis, igbinary, intl, gd, imagick, OPcache, and custom PHP configurations"
       user: root
     - log: "Setup Database Node"
     - cmd[sqldb]: |-

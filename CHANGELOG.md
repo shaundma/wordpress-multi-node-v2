@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.9] - 2025-12-04
+
+### Added
+- **Custom PHP Configuration Files**: Added modular PHP configuration via `/etc/php.d/` instead of modifying `/etc/php.ini` directly
+  - Added `configs/php.d/opcache.ini` with optimized OPcache settings for production
+    - 512 MB memory consumption (increased from 256 MB)
+    - 64 MB interned strings buffer (increased from 16 MB)
+    - 32,500 max accelerated files (increased from 10,000)
+    - 60 second revalidation frequency (increased from 2 seconds for production)
+    - OPcache CLI enabled
+    - save_comments enabled for better compatibility
+  - Added `configs/php.d/wordpress.ini` with WordPress-specific PHP settings
+    - 256 MB upload and post size limits
+    - 300 second execution and input timeouts
+    - 2048 max input variables
+    - Europe/Amsterdam timezone
+    - Security hardening (expose_php off, httponly cookies)
+    - Error reporting configured for production
+
+### Changed
+- manifest.yml: Updated PHP configuration deployment to use modular `/etc/php.d/` files
+  - Configuration files are now downloaded from repository and placed in `/etc/php.d/`
+  - More maintainable approach compared to sed commands on `/etc/php.ini`
+  - Automatic deployment during environment setup with error checking
+
+### Benefits
+- Cleaner separation of custom PHP settings from base configuration
+- Easier to update and maintain PHP settings
+- Better organization following Linux/PHP best practices
+- Settings persist across PHP version upgrades
+
 ## [1.2.8] - 2025-12-02
 
 ### Fixed
