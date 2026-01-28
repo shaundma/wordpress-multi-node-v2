@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.13] - 2026-01-28
+
+### Fixed
+- **CRITICAL: Incorrect MySQL Password in .my.cnf**: Fixed wrong password being written to `/root/.my.cnf`
+  - The `jem passwd set` command changes the MySQL root password to the specified value
+  - In v1.2.12, we were writing the old root password to `.my.cnf` after `jem passwd set` changed it
+  - This caused authentication failures when trying to use passwordless MySQL access
+  - Now correctly writes the new password (DB_PASS) that `jem passwd set` applies
+  - MySQL root password is now synchronized with Jelastic node password for consistency
+  - Passwordless MySQL root access now works correctly with `mysql` command
+
+### Changed
+- manifest.yml: Updated `.my.cnf` to use `${globals.DB_PASS}` instead of `$ROOT_PASS` after `jem passwd set`
+- manifest.yml: Added explanatory comments about password change behavior
+
 ## [1.2.12] - 2026-01-28
 
 ### Fixed

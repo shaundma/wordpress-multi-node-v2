@@ -2,7 +2,7 @@ jpsType: install
 jpsVersion: '1.7.2'
 id: wordpress-multinode
 name: WordPress Multi-Node LEMP Stack
-version: 1.2.12
+version: 1.2.13
 versionDate: 2026-01-28
 categories:
   - apps/blogs
@@ -11,7 +11,7 @@ categories:
 logo: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/images/wp-standalone.png
 homepage: http://wordpress.org/
 description:
-  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.12 - Updated 2026-01-28
+  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.13 - Updated 2026-01-28
   short: WordPress Multi-Node LEMP Stack with separate Nginx+PHP, MariaDB, and Redis nodes
 
 baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
@@ -547,13 +547,14 @@ actions:
           exit 1
         fi
 
-        # Set Jelastic password
+        # Set Jelastic password (this also changes MySQL root password to match)
         jem passwd set -p ${globals.DB_PASS} 2>&1 | grep -i "success"
 
         # Update .my.cnf with [client] section for passwordless root access
         # This must be done AFTER jem passwd set, as that command overwrites .my.cnf
+        # Note: jem passwd set changes the MySQL root password to DB_PASS
         echo "Updating /root/.my.cnf with [client] and [mysql] sections..."
-        printf "[client]\nuser=root\npassword=%s\n\n[mysql]\nuser=root\npassword=%s\n\n[mysqladmin]\nuser=root\npassword=%s\n" "$ROOT_PASS" "$ROOT_PASS" "$ROOT_PASS" > /root/.my.cnf
+        printf "[client]\nuser=root\npassword=%s\n\n[mysql]\nuser=root\npassword=%s\n\n[mysqladmin]\nuser=root\npassword=%s\n" "${globals.DB_PASS}" "${globals.DB_PASS}" "${globals.DB_PASS}" > /root/.my.cnf
         chmod 600 /root/.my.cnf
         echo "✓ /root/.my.cnf configured with [client], [mysql], and [mysqladmin] sections"
 
