@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.11] - 2026-01-28
+
+### Fixed
+- **CRITICAL: YAML Parsing Error**: Fixed manifest syntax error preventing deployment
+  - Heredoc syntax in `.my.cnf` creation was causing JPS parser to fail with "could not find expected ':'" error
+  - Error message: "An error occurred while trying to retrieve application data"
+  - Replaced heredoc with single `printf` command to avoid YAML parsing conflicts
+  - Manifest now validates correctly and deploys successfully
+
+### Changed
+- manifest.yml: Replaced multi-line heredoc with printf for .my.cnf creation
+
 ## [1.2.10] - 2026-01-28
 
 ### Fixed
