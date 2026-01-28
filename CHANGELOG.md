@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.12] - 2026-01-28
+
+### Fixed
+- **MySQL Configuration File Overwrite Issue**: Fixed `/root/.my.cnf` being overwritten by `jem passwd set` command
+  - The `[client]` and `[mysql]` sections were being written before `jem passwd set`
+  - Jelastic Environment Manager recreates `.my.cnf` with only `[mysqladmin]` section when setting password
+  - Moved `.my.cnf` configuration to run AFTER `jem passwd set` command
+  - Now includes all three sections: `[client]`, `[mysql]`, and `[mysqladmin]`
+  - Passwordless MySQL root access now works correctly
+
+### Changed
+- manifest.yml: Relocated `.my.cnf` configuration in `createUserDB` action to execute after `jem passwd set`
+- manifest.yml: Added `[mysqladmin]` section to preserve Jelastic compatibility
+
 ## [1.2.11] - 2026-01-28
 
 ### Fixed

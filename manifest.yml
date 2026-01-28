@@ -2,7 +2,7 @@ jpsType: install
 jpsVersion: '1.7.2'
 id: wordpress-multinode
 name: WordPress Multi-Node LEMP Stack
-version: 1.2.11
+version: 1.2.12
 versionDate: 2026-01-28
 categories:
   - apps/blogs
@@ -11,7 +11,7 @@ categories:
 logo: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/images/wp-standalone.png
 homepage: http://wordpress.org/
 description:
-  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.11 - Updated 2026-01-28
+  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.12 - Updated 2026-01-28
   short: WordPress Multi-Node LEMP Stack with separate Nginx+PHP, MariaDB, and Redis nodes
 
 baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
@@ -511,12 +511,6 @@ actions:
 
         echo "Found MySQL root password"
 
-        # Update .my.cnf with [client] section for passwordless root access
-        echo "Updating /root/.my.cnf with [client] section..."
-        printf "[client]\nuser=root\npassword=%s\n\n[mysql]\nuser=root\npassword=%s\n" "$ROOT_PASS" "$ROOT_PASS" > /root/.my.cnf
-        chmod 600 /root/.my.cnf
-        echo "✓ /root/.my.cnf configured with [client] section"
-
         # Create wordpress database
         echo "Creating wordpress database..."
         mysql -uroot -p"$ROOT_PASS" -e "CREATE DATABASE IF NOT EXISTS wordpress CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>&1
@@ -555,6 +549,13 @@ actions:
 
         # Set Jelastic password
         jem passwd set -p ${globals.DB_PASS} 2>&1 | grep -i "success"
+
+        # Update .my.cnf with [client] section for passwordless root access
+        # This must be done AFTER jem passwd set, as that command overwrites .my.cnf
+        echo "Updating /root/.my.cnf with [client] and [mysql] sections..."
+        printf "[client]\nuser=root\npassword=%s\n\n[mysql]\nuser=root\npassword=%s\n\n[mysqladmin]\nuser=root\npassword=%s\n" "$ROOT_PASS" "$ROOT_PASS" "$ROOT_PASS" > /root/.my.cnf
+        chmod 600 /root/.my.cnf
+        echo "✓ /root/.my.cnf configured with [client], [mysql], and [mysqladmin] sections"
 
         echo "Database setup completed successfully"
       user: root
