@@ -2,8 +2,8 @@ jpsType: install
 jpsVersion: '1.7.2'
 id: wordpress-multinode
 name: WordPress Multi-Node LEMP Stack
-version: 1.2.9
-versionDate: 2025-12-04
+version: 1.2.10
+versionDate: 2026-01-28
 categories:
   - apps/blogs
   - apps/content-management
@@ -11,7 +11,7 @@ categories:
 logo: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/images/wp-standalone.png
 homepage: http://wordpress.org/
 description:
-  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.9 - Updated 2025-12-04
+  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.10 - Updated 2026-01-28
   short: WordPress Multi-Node LEMP Stack with separate Nginx+PHP, MariaDB, and Redis nodes
 
 baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
@@ -122,8 +122,8 @@ onInstall:
     - install:
         jps: /scripts/events.jps?_r=${fn.random}
         skipEmail: true
+    - createUserDB
     - if (${settings.wp-addon:true}):
-      - createUserDB
       - installBedrock
       - setupBedrockNginx
       - if (${settings.mu-addon:false}): installMultisite
@@ -510,6 +510,20 @@ actions:
         fi
 
         echo "Found MySQL root password"
+
+        # Update .my.cnf with [client] section for passwordless root access
+        echo "Updating /root/.my.cnf with [client] section..."
+        cat > /root/.my.cnf << EOF
+[client]
+user=root
+password=$ROOT_PASS
+
+[mysql]
+user=root
+password=$ROOT_PASS
+EOF
+        chmod 600 /root/.my.cnf
+        echo "✓ /root/.my.cnf configured with [client] section"
 
         # Create wordpress database
         echo "Creating wordpress database..."

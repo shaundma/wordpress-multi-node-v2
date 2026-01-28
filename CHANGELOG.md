@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.10] - 2026-01-28
+
+### Fixed
+- **CRITICAL: Database Not Created When WordPress Installation Disabled**: Fixed missing database and user creation for skeleton deployments
+  - When "Install WordPress" was deselected, database credentials were generated and shown in .env and success emails
+  - However, the database and user were never actually created in MariaDB
+  - This caused skeleton deployments to have invalid, non-functional database credentials
+  - Moved `createUserDB` action outside the WordPress installation conditional (manifest.yml:125)
+  - Database and user are now created regardless of WordPress installation choice
+  - Both WordPress and skeleton deployments now have working database credentials
+
+### Added
+- **Enhanced MySQL Configuration File**: Added proper `[client]` and `[mysql]` sections to `/root/.my.cnf`
+  - Enables passwordless MySQL access for root user from command line
+  - Includes both `[client]` section (applies to all MySQL client programs) and `[mysql]` section (mysql CLI specific)
+  - Properly secured with 600 permissions
+  - Simplifies database administration and troubleshooting
+
+### Changed
+- manifest.yml: Relocated `createUserDB` to execute before WordPress/skeleton conditional branches
+- manifest.yml: Enhanced `createUserDB` to configure `/root/.my.cnf` with client authentication
+- Ensures consistent database setup for all deployment types
+
 ## [1.2.9] - 2025-12-04
 
 ### Added

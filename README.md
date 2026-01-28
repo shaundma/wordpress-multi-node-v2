@@ -4,7 +4,7 @@
 
 # WordPress Multi-Node LEMP Stack with Bedrock
 
-**Version 1.2.9** | Last Updated: December 4, 2025
+**Version 1.2.10** | Last Updated: January 28, 2026
 
 An automated WordPress deployment package for **Virtuozzo Application Platform** that creates a high-performance, scalable WordPress environment using **Roots.io Bedrock** and **Trellis** architecture across multiple nodes.
 
