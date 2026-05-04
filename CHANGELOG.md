@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.14] - 2026-05-04
+
+### Fixed
+- **Bedrock plugin install failure**: `composer require wpackagist-plugin/redis-cache` and `wpackagist-plugin/woocommerce` failed with "Could not find a matching version of package"
+  - Recent versions of `roots/bedrock` removed the wpackagist repository from the default `composer.json`
+  - Bedrock now ships with `repo.wp-packages.org` and the `wp-plugin/<slug>` namespace instead
+  - Updated `scripts/installBedrock.jps` and `manifest.yml` to use `wp-plugin/redis-cache` and `wp-plugin/woocommerce`
+
 ## [1.2.13] - 2026-01-28
 
 ### Fixed

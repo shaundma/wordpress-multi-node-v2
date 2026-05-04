@@ -438,7 +438,7 @@ actions:
 
         # Install Redis Object Cache plugin
         echo "Installing Redis Object Cache plugin via Composer..."
-        composer require wpackagist-plugin/redis-cache
+        composer require wp-plugin/redis-cache
 
         # Activate plugins via WP-CLI
         echo "Activating Redis Object Cache plugin..."
