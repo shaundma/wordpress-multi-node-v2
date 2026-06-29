@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.15] - 2026-06-29
+
+### Fixed
+- **Bedrock install failed with masked error `4109` at `installBedrock.cmd[cp]`**: `composer create-project roots/bedrock` aborted mid-download of WordPress core (`roots/wordpress`) on a cold cache, leaving `composer.json` + `composer.lock` but no `web/wp`
+  - Composer 2 writes `composer.lock` before extracting packages, so a transient GitHub/packagist download failure leaves the skeleton without WP core
+  - `scripts/installBedrock.jps` previously inferred success from file presence and never checked composer's exit code, so it neither retried nor surfaced the real error (which JEM masked as `********` because the action carries passwords)
+  - Rewrote the `installBedrock` action to: capture composer's real exit code, retry `create-project` up to 3x, self-heal via `composer install` when `web/wp` is missing, clear the target dir before install (avoids "directory not empty" on retries), and mirror all output unmasked to `/var/log/run.log` on the cp node
+  - Added an optional `settings.github_token` hook to authenticate Composer to GitHub and avoid anonymous API rate limits (empty/no-op by default)
+
 ## [1.2.14] - 2026-05-04
 
 ### Fixed

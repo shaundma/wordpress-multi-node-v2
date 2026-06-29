@@ -38,32 +38,67 @@ actions:
   installBedrock:
     - log: "Installing Bedrock via Composer"
     - cmd[cp]: |-
-        # Create Bedrock installation in releases/1
-        echo "Creating Bedrock project via Composer..."
-        cd ${globals.WEBROOT}/releases
-
-        # Set Composer to allow plugins and disable interactive mode
         export COMPOSER_ALLOW_SUPERUSER=1
+        TARGET=${globals.WEBROOT}/releases/1
+        LOG=/var/log/run.log
 
-        # Install Bedrock into releases/1 (which already exists)
-        cd ${globals.WEBROOT}/releases/1
-        composer create-project roots/bedrock . --no-interaction --prefer-dist 2>&1
+        # Mirror all output to run.log on this node. JEM masks the copy returned
+        # to the platform (this action carries passwords), so the dashboard shows
+        # only "********"; the unmasked detail lives here on the cp node.
+        log() { echo "$@" | tee -a "$LOG"; }
+        run_composer() { composer "$@" 2>&1 | tee -a "$LOG"; return ${PIPESTATUS[0]}; }
 
-        # Verify installation
-        if [ ! -f ${globals.WEBROOT}/releases/1/composer.json ]; then
-          echo "ERROR: Bedrock installation failed"
-          echo "Composer may have encountered an error"
+        log "Creating Bedrock project via Composer into $TARGET ..."
+
+        # Optional: authenticate Composer to GitHub to avoid anonymous API rate
+        # limits on the shared egress IP. Wire by passing settings.github_token
+        # from the caller; empty (default) = no-op.
+        if [ -n "${settings.github_token:}" ]; then
+          composer config -g github-oauth.github.com "${settings.github_token:}" >/dev/null 2>&1 || true
+        fi
+
+        # create-project requires an empty target; clear any partial/previous run
+        # so a retried environment cannot hit "directory not empty".
+        rm -rf "$TARGET"; mkdir -p "$TARGET"; cd "$TARGET"
+
+        # Retry to absorb transient download failures (cold cache, GitHub/packagist
+        # hiccups). Capture composer's REAL exit code instead of inferring it from
+        # file presence, which is what previously hid the actual error.
+        RC=1
+        for attempt in 1 2 3; do
+          log "composer create-project attempt $attempt ..."
+          run_composer create-project roots/bedrock . --no-interaction --prefer-dist --no-progress
+          RC=$?
+          if [ $RC -eq 0 ] && [ -d "$TARGET/web/wp" ]; then
+            log "create-project succeeded on attempt $attempt"
+            break
+          fi
+          log "Attempt $attempt incomplete (exit=$RC). Retrying in 5s..."
+          sleep 5
+        done
+
+        # Self-heal: composer writes composer.lock BEFORE extracting packages, so a
+        # mid-download abort leaves the skeleton + lock but no web/wp. Finish from
+        # the lock, which downloads roots/wordpress into web/wp.
+        if [ ! -d "$TARGET/web/wp" ] && [ -f "$TARGET/composer.json" ]; then
+          log "web/wp missing after create-project - running composer install to complete..."
+          run_composer install --no-interaction --prefer-dist --no-progress
+          RC=$?
+        fi
+
+        # Verify on composer's exit code AND the resulting artifacts.
+        if [ ! -f "$TARGET/composer.json" ]; then
+          log "ERROR: Bedrock installation failed - composer.json missing (last exit=$RC)"
+          exit 1
+        fi
+        if [ ! -d "$TARGET/web/wp" ]; then
+          log "ERROR: WordPress core not found in web/wp after install (last exit=$RC)"
+          log "Full composer output is above in $LOG on this cp node."
           exit 1
         fi
 
-        if [ ! -d ${globals.WEBROOT}/releases/1/web/wp ]; then
-          echo "ERROR: WordPress core not found after Bedrock installation"
-          exit 1
-        fi
-
-        echo "Bedrock installed successfully in releases/1"
-        echo "Bedrock structure created:"
-        ls -la ${globals.WEBROOT}/releases/1/ | head -15
+        log "Bedrock installed successfully in releases/1"
+        ls -la "$TARGET/" | tee -a "$LOG" | head -15
       user: root
 
   createSymlinks:
