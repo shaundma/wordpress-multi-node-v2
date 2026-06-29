@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.16] - 2026-06-29
+
+### Changed
+- **Hardened the remaining install steps against transient/optional failures** (same class as the v1.2.15 create-project fix), without loosening any check that guards real functionality:
+  - `setupNodes` (manifest.yml): `redis` and `igbinary` PHP extensions still hard-fail (the Redis object cache depends on them); `intl`, `gd`, `imagick` are now best-effort with a warning instead of `exit 1` (a missing optional module can no longer abort the build). Extension enabling also appends the `extension=` line when the module file exists but no stock entry is present.
+  - OPcache verification and the `opcache.ini` / `wordpress.ini` tuning downloads are now warn-and-continue (performance only; base OPcache settings are already applied inline) and the downloads retry.
+  - `installWordPress` (installBedrock.jps): MySQL-client install and WP-CLI download now retry; WP-CLI uses `curl -f` (cannot install an HTTP error page) and verifies the phar runs before placing it. All database-connection and WordPress-core verification `exit 1` checks are unchanged.
+  - `configurePlugins` (installBedrock.jps): `composer require wp-plugin/redis-cache` now retries with real exit-code capture; plugin activation failure is reported explicitly. Output mirrored unmasked to `/var/log/run.log`.
+
 ## [1.2.15] - 2026-06-29
 
 ### Fixed

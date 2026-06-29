@@ -313,17 +313,41 @@ actions:
     - cmd[cp]: |-
         cd ${globals.WEBROOT}/current
 
-        # Install MySQL client if not present (required for WP-CLI database operations)
+        LOG=/var/log/run.log
+        log() { echo "$@" | tee -a "$LOG"; }
+
+        # Install MySQL client if not present (required for WP-CLI database
+        # operations). Retry to absorb transient package-mirror failures.
         if ! command -v mysql &> /dev/null; then
-          echo "Installing MySQL client..."
-          yum install -y mysql 2>&1 || apt-get install -y mysql-client 2>&1
+          log "Installing MySQL client..."
+          for attempt in 1 2 3; do
+            { yum install -y mysql 2>&1 || apt-get install -y mysql-client 2>&1; } | tee -a "$LOG"
+            command -v mysql &> /dev/null && break
+            log "MySQL client install attempt $attempt failed. Retrying in 5s..."
+            sleep 5
+          done
         fi
 
-        # Install WP-CLI if not present
+        # Install WP-CLI if not present. curl -f so we never install an HTTP
+        # error page; retry; verify the phar actually runs before placing it.
         if [ ! -f /usr/local/bin/wp ]; then
-          curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-          chmod +x wp-cli.phar
-          mv wp-cli.phar /usr/local/bin/wp
+          log "Downloading WP-CLI..."
+          for attempt in 1 2 3; do
+            if curl -fsSL -o /tmp/wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+               && php /tmp/wp-cli.phar --info >/dev/null 2>&1; then
+              chmod +x /tmp/wp-cli.phar
+              mv /tmp/wp-cli.phar /usr/local/bin/wp
+              break
+            fi
+            log "WP-CLI download attempt $attempt failed or invalid. Retrying in 5s..."
+            rm -f /tmp/wp-cli.phar
+            sleep 5
+          done
+        fi
+
+        if [ ! -f /usr/local/bin/wp ]; then
+          log "ERROR: WP-CLI could not be installed"
+          exit 1
         fi
 
         # Verify WordPress core files exist
@@ -471,30 +495,50 @@ actions:
     - cmd[cp]: |-
         cd ${globals.WEBROOT}/current
 
-        # Install Redis Object Cache plugin
-        echo "Installing Redis Object Cache plugin via Composer..."
-        composer require wp-plugin/redis-cache
+        export COMPOSER_ALLOW_SUPERUSER=1
+        LOG=/var/log/run.log
+        log() { echo "$@" | tee -a "$LOG"; }
+        run() { "$@" 2>&1 | tee -a "$LOG"; return ${PIPESTATUS[0]}; }
 
-        # Activate plugins via WP-CLI
-        echo "Activating Redis Object Cache plugin..."
-        wp plugin activate redis-cache --allow-root
-
-        # Enable Redis object cache
-        echo "Enabling Redis object cache..."
-        REDIS_ENABLE_OUTPUT=$(wp redis enable --allow-root 2>&1)
-        REDIS_ENABLE_EXIT=$?
-
-        echo "$REDIS_ENABLE_OUTPUT"
-
-        if [ $REDIS_ENABLE_EXIT -eq 0 ] && echo "$REDIS_ENABLE_OUTPUT" | grep -q "Success: Object cache enabled"; then
-          echo "Redis object cache enabled successfully"
-        else
-          echo "ERROR: Failed to enable Redis object cache"
-          echo "Output: $REDIS_ENABLE_OUTPUT"
+        # Install Redis Object Cache plugin. Retry to absorb transient
+        # GitHub/packagist download failures (same class as the create-project fix).
+        log "Installing Redis Object Cache plugin via Composer..."
+        RC=1
+        for attempt in 1 2 3; do
+          run composer require wp-plugin/redis-cache --no-interaction --no-progress
+          RC=$?
+          [ $RC -eq 0 ] && break
+          log "composer require attempt $attempt failed (exit=$RC). Retrying in 5s..."
+          sleep 5
+        done
+        if [ $RC -ne 0 ]; then
+          log "ERROR: Failed to install redis-cache plugin via Composer (exit=$RC)"
           exit 1
         fi
 
-        echo "Plugins configured successfully"
+        # Activate plugins via WP-CLI
+        log "Activating Redis Object Cache plugin..."
+        if ! run wp plugin activate redis-cache --allow-root; then
+          log "ERROR: Failed to activate redis-cache plugin"
+          exit 1
+        fi
+
+        # Enable Redis object cache
+        log "Enabling Redis object cache..."
+        REDIS_ENABLE_OUTPUT=$(wp redis enable --allow-root 2>&1)
+        REDIS_ENABLE_EXIT=$?
+
+        echo "$REDIS_ENABLE_OUTPUT" | tee -a "$LOG"
+
+        if [ $REDIS_ENABLE_EXIT -eq 0 ] && echo "$REDIS_ENABLE_OUTPUT" | grep -q "Success: Object cache enabled"; then
+          log "Redis object cache enabled successfully"
+        else
+          log "ERROR: Failed to enable Redis object cache"
+          log "Output: $REDIS_ENABLE_OUTPUT"
+          exit 1
+        fi
+
+        log "Plugins configured successfully"
       user: root
 
   setPermissions:
