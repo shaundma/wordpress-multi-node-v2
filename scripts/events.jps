@@ -73,6 +73,9 @@ onAfterMigrate:
       settings:
         domain: ${env.domain}
 
+onAfterRedeployContainer [nodeGroup:cp]:
+  recreateNginxFastcgiCacheDir
+
 onAfterScaleIn [nodeGroup:nosqldb]:
   updateRedisMaxmemory
 
@@ -83,6 +86,30 @@ onAfterSetCloudletCount [nodeGroup:nosqldb]:
   updateRedisMaxmemory
 
 actions:
+  recreateNginxFastcgiCacheDir:
+    - log: "Recreating /var/cache/nginx/fastcgi after cp container redeploy"
+    - cmd[cp]: |-
+        # The cp container redeploy (eg. PHP engine swap) wipes /var/cache/nginx/.
+        # fastcgi_cache_path only creates the leaf directory, not the parent, so
+        # the next nginx -t / reload fails with:
+        #   mkdir() "/var/cache/nginx/fastcgi" failed (2: No such file or directory)
+        # Recreate the dir and reload nginx if it is up.
+        mkdir -p /var/cache/nginx/fastcgi
+        chown nginx:nginx /var/cache/nginx/fastcgi
+        chmod 755 /var/cache/nginx/fastcgi
+        echo "Recreated /var/cache/nginx/fastcgi"
+
+        if systemctl is-active --quiet nginx; then
+          if nginx -t 2>&1; then
+            systemctl reload nginx && echo "Nginx reloaded"
+          else
+            echo "WARNING: nginx -t failed after cache dir recreate, not reloading"
+          fi
+        else
+          echo "Nginx not running, skipping reload"
+        fi
+      user: root
+
   updateRedisMaxmemory:
     - log: "=== Redis Scaling Event Triggered ==="
     - script: |

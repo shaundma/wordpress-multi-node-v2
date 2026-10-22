@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.17] - 2026-10-22
+
+### Fixed
+- **Nginx config test failed after a PHP engine redeploy on the `cp` node** with `mkdir() "/var/cache/nginx/fastcgi" failed (2: No such file or directory)`:
+  - Jelastic wipes `/var/cache/nginx/` when it redeploys the `cp` container (eg. switching PHP version), and the `fastcgi_cache_path` directive only creates the leaf directory, not its parent, so the next `nginx -t`/reload emerg-fails
+  - Added `onAfterRedeployContainer[nodeGroup:cp]` to `scripts/events.jps` which recreates `/var/cache/nginx/fastcgi` (owned by `nginx:nginx`) and reloads nginx when it is running and `nginx -t` passes
+  - Note: event listeners are registered during install, so already-provisioned environments need a one-shot repair before this hook starts firing on future redeploys. Import `scripts/fix-fastcgi-cache.jps` against the existing env (Import → URL: `https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/scripts/fix-fastcgi-cache.jps`) and it will recreate the directory and re-register the event hook. Or do it by hand on the cp node: `mkdir -p /var/cache/nginx/fastcgi && chown nginx:nginx /var/cache/nginx/fastcgi`
+
 ## [1.2.16] - 2026-06-29
 
 ### Changed

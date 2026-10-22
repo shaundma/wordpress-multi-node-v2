@@ -1,0 +1,52 @@
+---
+jpsType: update
+id: wordpress-multinode-fix-fastcgi-cache
+name: Fix Nginx FastCGI Cache Directory
+description: |
+  One-shot repair for environments provisioned before v1.2.17.
+
+  Recreates /var/cache/nginx/fastcgi on the cp node (wiped by a cp
+  container redeploy, eg. a PHP engine swap, causing nginx -t to
+  emerg-fail) and re-installs events.jps so the
+  onAfterRedeployContainer hook that prevents a recurrence is
+  registered going forward.
+
+baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
+
+onInstall:
+  - recreateCacheDir
+  - reinstallEvents
+
+actions:
+  recreateCacheDir:
+    - log: "Recreating /var/cache/nginx/fastcgi on cp"
+    - cmd[cp]: |-
+        mkdir -p /var/cache/nginx/fastcgi
+        chown nginx:nginx /var/cache/nginx/fastcgi
+        chmod 755 /var/cache/nginx/fastcgi
+        echo "Cache dir ready: $(ls -ld /var/cache/nginx/fastcgi)"
+
+        if systemctl is-active --quiet nginx; then
+          if nginx -t 2>&1; then
+            systemctl reload nginx && echo "Nginx reloaded"
+          else
+            echo "WARNING: nginx -t failed after cache dir recreate, not reloading"
+            exit 1
+          fi
+        else
+          echo "Nginx not running, will come up clean on next start"
+        fi
+      user: root
+
+  reinstallEvents:
+    - log: "Re-registering events.jps so onAfterRedeployContainer hook is active"
+    - install: ${baseUrl}/scripts/events.jps?_r=${fn.random}
+      skipEmail: true
+
+success: |
+  **FastCGI cache directory repaired**
+
+  - `/var/cache/nginx/fastcgi` recreated on the cp node
+  - Nginx reloaded if it was running
+  - `onAfterRedeployContainer[nodeGroup:cp]` event hook re-registered
+    so future cp redeploys will self-heal automatically
