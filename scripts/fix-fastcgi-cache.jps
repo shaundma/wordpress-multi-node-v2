@@ -26,16 +26,26 @@ actions:
         chmod 755 /var/cache/nginx/fastcgi
         echo "Cache dir ready: $(ls -ld /var/cache/nginx/fastcgi)"
 
-        if systemctl is-active --quiet nginx; then
-          if nginx -t 2>&1; then
-            systemctl reload nginx && echo "Nginx reloaded"
-          else
-            echo "WARNING: nginx -t failed after cache dir recreate, not reloading"
-            exit 1
-          fi
-        else
-          echo "Nginx not running, will come up clean on next start"
+        # Validate config before touching the service. If -t still fails
+        # the real problem is somewhere else; bail loudly rather than put
+        # nginx in a crash loop.
+        if ! nginx -t 2>&1; then
+          echo "ERROR: nginx -t failed after cache dir recreate"
+          exit 1
         fi
+
+        # Nginx may be inactive precisely because the earlier reload
+        # tripped on this missing directory, so start it unconditionally
+        # when it is not running, and reload when it is.
+        if systemctl is-active --quiet nginx; then
+          systemctl reload nginx && echo "Nginx reloaded"
+        else
+          systemctl start nginx && echo "Nginx started"
+        fi
+
+        systemctl is-active --quiet nginx && \
+          echo "Nginx is active: $(systemctl show -p ActiveState --value nginx)" || \
+          { echo "ERROR: Nginx failed to come up"; systemctl status nginx --no-pager | head -20; exit 1; }
       user: root
 
   reinstallEvents:
@@ -47,6 +57,6 @@ success: |
   **FastCGI cache directory repaired**
 
   - `/var/cache/nginx/fastcgi` recreated on the cp node
-  - Nginx reloaded if it was running
+  - Nginx started (or reloaded if it was already running)
   - `onAfterRedeployContainer[nodeGroup:cp]` event hook re-registered
     so future cp redeploys will self-heal automatically
