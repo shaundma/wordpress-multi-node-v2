@@ -4,7 +4,7 @@
 
 # WordPress Multi-Node LEMP Stack with Bedrock
 
-**Version 1.2.16** | Last Updated: June 29, 2026
+**Version 1.2.17** | Last Updated: October 22, 2026
 
 An automated WordPress deployment package for **Virtuozzo Application Platform** that creates a high-performance, scalable WordPress environment using **Roots.io Bedrock** and **Trellis** architecture across multiple nodes.
 
@@ -244,6 +244,26 @@ When you scale the Redis node (increase or decrease cloudlets), the system autom
 **Example**: Scale Redis from 2 cloudlets (256 MB) to 4 cloudlets (512 MB), and maxmemory automatically updates from 204 MB to 409 MB.
 
 See `ARCHITECTURE.md` for detailed technical documentation.
+
+## Troubleshooting
+
+### Nginx fails after a PHP engine redeploy
+
+If you have an environment that was installed before v1.2.17 and `nginx -t` or a reload emerg-fails on the `cp` node with:
+
+```
+nginx: [emerg] mkdir() "/var/cache/nginx/fastcgi" failed (2: No such file or directory)
+```
+
+the cause is that a `cp` container redeploy (eg. switching the PHP engine) wipes `/var/cache/nginx/`, and the `fastcgi_cache_path` directive only creates the leaf directory, not its parent. v1.2.17 adds an `onAfterRedeployContainer[nodeGroup:cp]` hook that self-heals this, but that hook is only registered on fresh installs.
+
+**For environments provisioned before v1.2.17**, import the one-shot repair JPS against the existing environment (Import → URL):
+
+```
+https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/scripts/fix-fastcgi-cache.jps
+```
+
+It recreates `/var/cache/nginx/fastcgi` as `nginx:nginx` 0755, reloads nginx if it is running and `nginx -t` passes, and re-installs `events.jps` so the self-healing hook is registered for all future redeploys on that environment.
 
 ## Support & Documentation
 
