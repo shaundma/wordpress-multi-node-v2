@@ -67,22 +67,16 @@ The package deploys **three independent nodes** that work together:
 
 ## How to Deploy
 
-### Option 1: Deploy to Cloud Button
-
-Click the "**Deploy to Cloud**" button below to launch the installation wizard:
-
-[![Deploy to Cloud](https://raw.githubusercontent.com/jelastic-jps/common/main/images/deploy-to-cloud.png)](https://www.virtuozzo.com/install/?manifest=https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/manifest.yml)
-
-1. Enter your email address
-2. Choose a [Virtuozzo Public Cloud Provider](https://www.virtuozzo.com/application-platform-partners/)
-3. Click **Install**
-
-### Option 2: From Your VAP Account
+### From Your VAP Account
 
 If you already have a Virtuozzo Application Platform account:
 
 - **From Marketplace**: Find "WordPress Multi-Node LEMP Stack" in the [Marketplace](https://www.virtuozzo.com/application-platform-docs/marketplace/)
-- **Import Manifest**: [Import](https://www.virtuozzo.com/application-platform-docs/environment-import/) the `manifest.yml` file from this repository
+- **Import Manifest**: [Import](https://www.virtuozzo.com/application-platform-docs/environment-import/) the manifest from this URL:
+
+  ```
+  https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/manifest.yml
+  ```
 
 
 ## Installation Options
