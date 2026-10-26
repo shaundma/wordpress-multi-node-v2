@@ -4,7 +4,7 @@
 
 # WordPress Multi-Node LEMP Stack with Bedrock
 
-**Version 1.2.17** | Last Updated: October 22, 2026
+**Version 1.2.18** | Last Updated: October 26, 2026
 
 An automated WordPress deployment package for **Virtuozzo Application Platform** that creates a high-performance, scalable WordPress environment using **Roots.io Bedrock** and **Trellis** architecture across multiple nodes.
 
@@ -258,6 +258,22 @@ https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/scripts/
 ```
 
 It recreates `/var/cache/nginx/fastcgi` as `nginx:nginx` 0755, reloads nginx if it is running and `nginx -t` passes, and re-installs `events.jps` so the self-healing hook is registered for all future redeploys on that environment.
+
+### `wp` or `composer` missing after a PHP engine redeploy
+
+If you log into an existing environment and get `bash: wp: command not found` (or the same for `composer`), the cause is the same class as the fastcgi one above: a `cp` container redeploy (eg. switching the PHP engine) wipes the container OS layer, including `/usr/local/bin/wp` and `/usr/local/bin/composer`. The installer only drops these binaries at env-creation time, so once wiped nothing puts them back.
+
+v1.2.18 adds `reinstallWpCli` and `reinstallComposer` to the existing `onAfterRedeployContainer[nodeGroup:cp]` hook, which self-heals both on every future redeploy. The hook is only registered on fresh installs.
+
+**For environments provisioned before v1.2.18**, use `scripts/cli-restore.sh` from a jumpserver with access to the PaaS index CSV and the hardnodes:
+
+```
+./scripts/cli-restore.sh scan           # per-CT status for wp and composer
+./scripts/cli-restore.sh fix <ctid>...  # reinstall whatever is missing on named CTIDs
+./scripts/cli-restore.sh fix-missing    # scan, then reinstall across every affected CT (interactive confirm)
+```
+
+Each install uses `curl -f` + 3x retry + verify the phar runs before placing it, and no-ops when the binary is already present.
 
 ## Support & Documentation
 

@@ -74,7 +74,9 @@ onAfterMigrate:
         domain: ${env.domain}
 
 onAfterRedeployContainer [nodeGroup:cp]:
-  recreateNginxFastcgiCacheDir
+  - recreateNginxFastcgiCacheDir
+  - reinstallWpCli
+  - reinstallComposer
 
 onAfterScaleIn [nodeGroup:nosqldb]:
   updateRedisMaxmemory
@@ -108,6 +110,63 @@ actions:
         else
           echo "Nginx not running, skipping reload"
         fi
+      user: root
+
+  reinstallWpCli:
+    - log: "Reinstalling /usr/local/bin/wp after cp container redeploy"
+    - cmd[cp]: |-
+        # The cp container redeploy (eg. PHP engine swap) wipes the
+        # container OS layer, including /usr/local/bin/wp. The webroot
+        # volume (/var/www/webroot/ROOT) and nginx home (/var/lib/nginx)
+        # survive, so shared/wp-cli.yml is still in place. Rebuild just
+        # the binary with the same install block as installBedrock.jps,
+        # idempotent, retried, verified before placement.
+        if [ -x /usr/local/bin/wp ] && /usr/local/bin/wp --info --allow-root >/dev/null 2>&1; then
+          echo "wp-cli already present, skipping"
+          exit 0
+        fi
+        for attempt in 1 2 3; do
+          if curl -fsSL -o /tmp/wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+             && php /tmp/wp-cli.phar --info >/dev/null 2>&1; then
+            chmod +x /tmp/wp-cli.phar
+            mv /tmp/wp-cli.phar /usr/local/bin/wp
+            echo "wp-cli reinstalled: $(/usr/local/bin/wp --version --allow-root 2>&1 | head -1)"
+            exit 0
+          fi
+          echo "WP-CLI download attempt $attempt failed. Retrying in 5s..." >&2
+          rm -f /tmp/wp-cli.phar
+          sleep 5
+        done
+        echo "ERROR: WP-CLI could not be reinstalled after container redeploy" >&2
+        exit 1
+      user: root
+
+  reinstallComposer:
+    - log: "Reinstalling /usr/local/bin/composer after cp container redeploy"
+    - cmd[cp]: |-
+        # Same wipe class as reinstallWpCli: /usr/local/bin/composer lives
+        # in the container OS layer and vanishes on cp container redeploy.
+        # manifest.yml:installComposer only installs if missing, so once
+        # wiped nothing puts it back. Harden the download (curl -f, verify
+        # the phar runs, 3x retry) relative to the install-time raw wget.
+        if [ -x /usr/local/bin/composer ] && /usr/local/bin/composer --version >/dev/null 2>&1; then
+          echo "composer already present, skipping"
+          exit 0
+        fi
+        for attempt in 1 2 3; do
+          if curl -fsSL -o /tmp/composer.phar https://getcomposer.org/download/latest-stable/composer.phar \
+             && php /tmp/composer.phar --version >/dev/null 2>&1; then
+            chmod +x /tmp/composer.phar
+            mv /tmp/composer.phar /usr/local/bin/composer
+            echo "composer reinstalled: $(/usr/local/bin/composer --version 2>&1 | head -1)"
+            exit 0
+          fi
+          echo "Composer download attempt $attempt failed. Retrying in 5s..." >&2
+          rm -f /tmp/composer.phar
+          sleep 5
+        done
+        echo "ERROR: Composer could not be reinstalled after container redeploy" >&2
+        exit 1
       user: root
 
   updateRedisMaxmemory:

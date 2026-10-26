@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.18] - 2026-10-26
+
+### Fixed
+- **`wp` and `composer` missing after a PHP engine redeploy on the `cp` node** (`bash: wp: command not found` / `composer: command not found` once customers log in):
+  - Same class as v1.2.17: Jelastic rebuilds the `cp` container OS layer on an engine swap, wiping `/usr/local/bin/wp` and `/usr/local/bin/composer` along with everything else outside the webroot and nginx-home volumes. `installBedrock.jps:333-346` installs wp-cli and `manifest.yml:installComposer` installs composer, both at install time only and both guarded by a plain `[ ! -f ... ]` presence check, so once wiped nothing puts either back
+  - Added `reinstallWpCli` and `reinstallComposer` to `scripts/events.jps` on the existing `onAfterRedeployContainer[nodeGroup:cp]` hook (alongside `recreateNginxFastcgiCacheDir`). Each one skips cleanly when the binary is already present, and uses `curl -f` + 3x retry + verify-the-phar-runs before placing it (same hardening pattern as the install-time wp-cli, applied to composer too - the install-time composer install uses raw `wget` without verification)
+  - `shared/wp-cli.yml` survives the redeploy (it lives on the webroot volume with a symlink from `current/`), so only the binaries need restoring
+  - **Already-provisioned environments:** the event listener was registered at install time, so envs that have already lost their binaries will NOT self-heal on the next deploy of this JPS - they need a one-shot repair. Use `scripts/cli-restore.sh scan` (on bpc3) to see per-CT status for both tools, and `cli-restore.sh fix-missing` to reinstall whatever is missing across the fleet (interactive confirm). For a single CT: `cli-restore.sh fix <ctid>` restores both
+
 ## [1.2.17] - 2026-10-22
 
 ### Fixed
