@@ -1,0 +1,88 @@
+---
+jpsType: update
+id: wordpress-multinode-fix-php-config
+name: Fix OPcache and Redis PHP config
+description: |
+  One-shot repair for environments provisioned before v1.2.19.
+
+  Re-lays /etc/php.d/opcache.ini and /etc/php.d/redis.ini on the cp node
+  (both wiped by a Jelastic PHP engine redeploy, which also resets
+  /etc/php.ini to vanilla and strips the installer's zend_extension and
+  extension lines), restarts php-fpm, and re-installs events.jps so the
+  onAfterRedeployContainer hook that prevents a recurrence is registered
+  going forward.
+
+baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
+
+onInstall:
+  - restorePhpConfig
+  - reinstallEvents
+
+actions:
+  restorePhpConfig:
+    - log: "Restoring OPcache + Redis PHP config on cp"
+    - cmd[cp]: |-
+        mkdir -p /etc/php.d
+
+        fetch_ini() {
+          url="$1"; dest="$2"; label="$3"
+          for attempt in 1 2 3; do
+            if curl -fsSL -o "${dest}.new" "$url" && [ -s "${dest}.new" ]; then
+              mv -f "${dest}.new" "$dest"
+              echo "${label} deployed to ${dest}"
+              return 0
+            fi
+            echo "Download of ${label} attempt $attempt failed. Retrying in 3s..." >&2
+            sleep 3
+          done
+          echo "ERROR: Failed to download ${label} after retries" >&2
+          rm -f "${dest}.new"
+          return 1
+        }
+
+        fetch_ini ${baseUrl}/configs/php.d/opcache.ini   /etc/php.d/opcache.ini   "OPcache config"      || exit 1
+        fetch_ini ${baseUrl}/configs/php.d/redis.ini     /etc/php.d/redis.ini     "Redis + igbinary"    || exit 1
+        fetch_ini ${baseUrl}/configs/php.d/wordpress.ini /etc/php.d/wordpress.ini "WordPress PHP config" || true
+
+        # Validate config before touching the service. If -t fails the real
+        # problem is somewhere else; bail loudly rather than put php-fpm in
+        # a crash loop.
+        if ! php-fpm -t -y /etc/php-fpm.conf 2>&1; then
+          echo "ERROR: php-fpm -t failed after ini restore"
+          exit 1
+        fi
+
+        # php-fpm may be inactive precisely because the engine-redeploy left
+        # it that way, so start it unconditionally when not running, reload
+        # when it is.
+        if systemctl is-active --quiet php-fpm; then
+          systemctl reload php-fpm && echo "php-fpm reloaded"
+        else
+          systemctl start php-fpm && echo "php-fpm started"
+        fi
+
+        # Verify. Expect 3 matches: "Zend OPcache" + "redis" + "igbinary".
+        LOADED=$(php -m 2>&1 | grep -iE "^(zend opcache|redis|igbinary)$" | sort -u | paste -sd, -)
+        echo "Extensions loaded after restore: $LOADED"
+        OK=$(php -m 2>&1 | grep -ciE "^(zend opcache|redis|igbinary)$")
+        if [ "$OK" -eq 3 ]; then
+          echo "OK: OPcache, Redis and igbinary all loaded"
+        else
+          echo "ERROR: expected 3 of (Zend OPcache, redis, igbinary) loaded, got $OK"
+          php -m 2>&1 | head -40
+          exit 1
+        fi
+      user: root
+
+  reinstallEvents:
+    - log: "Re-registering events.jps so onAfterRedeployContainer hook is active"
+    - install: ${baseUrl}/scripts/events.jps?_r=${fn.random}
+      skipEmail: true
+
+success: |
+  **PHP config repaired**
+
+  - `/etc/php.d/opcache.ini`, `redis.ini` and `wordpress.ini` re-laid on the cp node
+  - php-fpm reloaded (or started if it was down)
+  - `onAfterRedeployContainer[nodeGroup:cp]` event hook re-registered so
+    future cp redeploys will self-heal automatically
