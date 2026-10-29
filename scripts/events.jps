@@ -133,11 +133,12 @@ actions:
           systemctl start php-fpm && echo "php-fpm started"
         fi
 
-        # Verify. The grep -c lets us surface a clear fail state in the
-        # Jelastic log instead of a silent partial restore.
+        # Verify. php -m lists "Zend OPcache" in both the [PHP Modules] and
+        # [Zend Modules] sections, so we dedupe with sort -u before counting;
+        # a raw grep -c would see 4 and false-flag the success case as a fail.
         LOADED=$(php -m 2>&1 | grep -iE "^(zend opcache|redis|igbinary)$" | sort -u | paste -sd, -)
         echo "Extensions loaded after restore: $LOADED"
-        OK=$(php -m 2>&1 | grep -ciE "^(zend opcache|redis|igbinary)$")
+        OK=$(php -m 2>&1 | grep -iE "^(zend opcache|redis|igbinary)$" | sort -u | wc -l)
         if [ "$OK" -eq 3 ]; then
           echo "OK: OPcache, Redis and igbinary all loaded"
         else
