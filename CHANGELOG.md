@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.19] - 2026-10-29
+
+### Fixed
+- **OPcache and the Redis object-cache extensions gone after a Jelastic PHP engine redeploy on the `cp` node** (observed on production-formule1 after the 21 Oct 2026 PHP 8.3.28 → 8.3.36 security upgrade: homepage TTFB climbed to ~10 s, scheduled-post failures recurred, Catelijn de Reuver / Roularta reported it on 29 Oct):
+  - Same class as v1.2.17 and v1.2.18: the `cp` container redeploy resets `/etc/php.ini` to the vanilla package default and wipes `/etc/php.d/*` down to the two postfix inis Jelastic ships, which strips the installer's `sed`-enabled `zend_extension=opcache.so` + `extension=redis.so` + `extension=igbinary.so` lines. The existing `configs/php.d/opcache.ini` carried only tuning values (no `zend_extension` line), so even if that file alone had survived, OPcache would still not have loaded
+  - `configs/php.d/opcache.ini` now ships `zend_extension=opcache.so` at the top so the ini is self-contained and does not depend on `/etc/php.ini` state. New `configs/php.d/redis.ini` carries `extension=igbinary.so` + `extension=redis.so` (igbinary first - the Redis object cache serialises through it)
+  - Added `restorePhpConfig` to `scripts/events.jps` on the existing `onAfterRedeployContainer[nodeGroup:cp]` hook, before `reinstallWpCli`/`reinstallComposer` (both of which invoke `php` to verify downloads, so OPcache state matters first). The action re-fetches the three inis from the project repo with `curl -f` + 3x retry + size check, restarts php-fpm and verifies that Zend OPcache, redis and igbinary all appear in `php -m` (prints `OK:` when all three loaded, `WARNING:` otherwise)
+  - Also added the `redis.ini` fetch to the initial `setupNodes` block in `manifest.yml` so fresh installs and redeployed envs end in the same `/etc/php.d` state (previously only `opcache.ini` and `wordpress.ini` were fetched; Redis was enabled by sed on `/etc/php.ini` only, which does not survive redeploy)
+  - **Already-provisioned environments:** same handover as v1.2.17/v1.2.18: the event listener is registered at install time, so envs that have already lost OPcache + Redis after an engine redeploy will NOT self-heal on the next deploy of this JPS. For a one-shot repair, drop the two inis in `/etc/php.d` on the `cp` node and restart php-fpm (same content as this repo's `configs/php.d/opcache.ini` and `configs/php.d/redis.ini`)
+
 ## [1.2.18] - 2026-10-26
 
 ### Fixed

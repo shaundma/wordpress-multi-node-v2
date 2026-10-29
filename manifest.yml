@@ -2,8 +2,8 @@ jpsType: install
 jpsVersion: '1.7.2'
 id: wordpress-multinode
 name: WordPress Multi-Node LEMP Stack
-version: 1.2.18
-versionDate: 2026-10-26
+version: 1.2.19
+versionDate: 2026-10-29
 categories:
   - apps/blogs
   - apps/content-management
@@ -11,7 +11,7 @@ categories:
 logo: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main/images/wp-standalone.png
 homepage: http://wordpress.org/
 description:
-  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.18 - Updated 2026-10-26
+  text: WordPress Multi-Node LEMP Stack following Roots.io Trellis architecture. Separate nodes for Nginx+PHP, MariaDB, and Redis for optimal performance and scalability. v1.2.19 - Updated 2026-10-29
   short: WordPress Multi-Node LEMP Stack with separate Nginx+PHP, MariaDB, and Redis nodes
 
 baseUrl: https://raw.githubusercontent.com/shaundma/wordpress-multi-node-v2/main
@@ -453,7 +453,8 @@ actions:
           return 0
         }
 
-        fetch_ini ${baseUrl}/configs/php.d/opcache.ini /etc/php.d/opcache.ini "OPcache config"
+        fetch_ini ${baseUrl}/configs/php.d/opcache.ini   /etc/php.d/opcache.ini   "OPcache config"
+        fetch_ini ${baseUrl}/configs/php.d/redis.ini     /etc/php.d/redis.ini     "Redis + igbinary"
         fetch_ini ${baseUrl}/configs/php.d/wordpress.ini /etc/php.d/wordpress.ini "WordPress PHP config"
 
         # Restart PHP-FPM to apply changes
